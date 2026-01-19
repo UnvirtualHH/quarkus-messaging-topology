@@ -42,13 +42,33 @@
             </div>
 
             <div id="messageComposer" class="message-composer">
-                <h3 style="margin-bottom: 10px;">✉️ Send Test Message</h3>
-                <textarea id="messagePayload" placeholder='Enter JSON payload, e.g.:
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">✉️ Send Test Message</h3>
+                    <div class="mode-toggle">
+                        <button class="mode-btn active" id="jsonModeBtn" onclick="switchToJsonMode()">
+                            📝 JSON
+                        </button>
+                        <button class="mode-btn" id="formModeBtn" onclick="switchToFormMode()">
+                            📋 Form
+                        </button>
+                    </div>
+                </div>
+
+                <div id="jsonMode" class="composer-mode">
+                    <textarea id="messagePayload" placeholder='Enter JSON payload, e.g.:
 {
   "id": "123",
   "message": "Hello World",
   "timestamp": "2026-01-18T14:00:00Z"
 }'></textarea>
+                </div>
+
+                <div id="formMode" class="composer-mode" style="display: none;">
+                    <div id="formFields" class="form-fields">
+                        <!-- Form fields will be dynamically generated here -->
+                    </div>
+                </div>
+
                 <button class="send-btn" onclick="sendMessage()">Send Message</button>
                 <div id="sendResult" style="margin-top: 10px;"></div>
             </div>

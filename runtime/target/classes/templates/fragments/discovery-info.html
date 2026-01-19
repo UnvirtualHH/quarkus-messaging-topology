@@ -1,0 +1,12 @@
+<!-- runtime/src/main/resources/templates/fragments/discovery-info.html -->
+<div class="discovery-info">
+    <div class="icon">🔍</div>
+    <div class="text">
+        <h3>Auto-Discovery Active</h3>
+        <p>Discovered {model.discoveredServicesCount} service(s) from registry • Updates automatically</p>
+    </div>
+    <button class="refresh-btn" onclick="location.reload()">
+        <span>🔄</span>
+        <span>Refresh</span>
+    </button>
+</div>

@@ -1,0 +1,16 @@
+de/prgrm/topology/runtime/generator/MermaidDiagramGenerator$Connection.class
+de/prgrm/topology/runtime/model/ChannelInfo.class
+de/prgrm/topology/runtime/generator/MermaidDiagramGenerator.class
+de/prgrm/topology/runtime/MessagingTopologyRecorder.class
+de/prgrm/topology/runtime/web/model/TopologyViewModel$Stats.class
+de/prgrm/topology/runtime/model/TopologyInfo.class
+de/prgrm/topology/runtime/web/model/TopologyViewModel.class
+de/prgrm/topology/runtime/model/TopologyRegistry.class
+de/prgrm/topology/runtime/web/model/TopologyViewModel$TopologyWithChannels.class
+de/prgrm/topology/runtime/service/ServiceRegistry.class
+de/prgrm/topology/runtime/web/TopologyApiController.class
+de/prgrm/topology/runtime/service/SchemaIntrospector.class
+de/prgrm/topology/runtime/service/MessageSender.class
+de/prgrm/topology/runtime/web/model/ChannelViewModel.class
+de/prgrm/topology/runtime/web/TopologyViewController.class
+de/prgrm/topology/runtime/web/TopologyViewController$Templates.class

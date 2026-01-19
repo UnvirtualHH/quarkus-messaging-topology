@@ -1,0 +1,57 @@
+<!-- runtime/src/main/resources/templates/fragments/channel-modal.html -->
+<div id="channelModal" class="modal" onclick="if(event.target === this) closeModal()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Channel Details</h2>
+            <div class="subtitle" id="modalSubtitle"></div>
+        </div>
+        <div class="modal-body">
+            <div class="detail-section">
+                <h3>📋 Channel Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-label">Service:</div>
+                    <div class="detail-value" id="detailService"></div>
+                    <div class="detail-label">Channel Name:</div>
+                    <div class="detail-value" id="detailChannelName"></div>
+                    <div class="detail-label">Topic:</div>
+                    <div class="detail-value" id="detailTopic"></div>
+                    <div class="detail-label">Direction:</div>
+                    <div class="detail-value" id="detailDirection"></div>
+                    <div class="detail-label">Implementation:</div>
+                    <div class="detail-value" id="detailImplementation"></div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>📦 Message Schema</h3>
+                <div class="schema-viewer" id="schemaViewer">
+                    <div style="color: #999;">Loading schema information...</div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn primary" id="sendMessageBtn" onclick="toggleMessageComposer()">
+                    <span>✉️</span>
+                    <span>Send Test Message</span>
+                </button>
+                <button class="action-btn secondary" onclick="exportSchema()">
+                    <span>💾</span>
+                    <span>Export Schema</span>
+                </button>
+            </div>
+
+            <div id="messageComposer" class="message-composer">
+                <h3 style="margin-bottom: 10px;">✉️ Send Test Message</h3>
+                <textarea id="messagePayload" placeholder='Enter JSON payload, e.g.:
+{
+  "id": "123",
+  "message": "Hello World",
+  "timestamp": "2026-01-18T14:00:00Z"
+}'></textarea>
+                <button class="send-btn" onclick="sendMessage()">Send Message</button>
+                <div id="sendResult" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+</div>

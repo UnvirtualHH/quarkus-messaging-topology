@@ -9,6 +9,7 @@ public class TopologyInfo {
     private String artifactId;
     private String version;
     private String serviceUrl;
+    private String projectName;
     private List<ChannelInfo> channels = new ArrayList<>();
 
     public TopologyInfo() {
@@ -65,5 +66,13 @@ public class TopologyInfo {
 
     public void addChannel(ChannelInfo channel) {
         this.channels.add(channel);
+    }
+
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public void setProjectName(String projectName) {
+        this.projectName = projectName;
     }
 }

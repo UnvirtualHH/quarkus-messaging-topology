@@ -5,6 +5,7 @@ de/prgrm/topology/runtime/MessagingTopologyRecorder.class
 de/prgrm/topology/runtime/web/model/TopologyViewModel$Stats.class
 de/prgrm/topology/runtime/model/TopologyInfo.class
 de/prgrm/topology/runtime/web/model/TopologyViewModel.class
+de/prgrm/topology/runtime/config/TopologyConfig.class
 de/prgrm/topology/runtime/model/TopologyRegistry.class
 de/prgrm/topology/runtime/web/model/TopologyViewModel$TopologyWithChannels.class
 de/prgrm/topology/runtime/service/ServiceRegistry.class

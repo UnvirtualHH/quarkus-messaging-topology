@@ -1,5 +1,3 @@
-// runtime/src/main/resources/META-INF/resources/q/messaging-topology/static/topology-viewer.js
-
 // Initialize Mermaid
 mermaid.initialize({
     startOnLoad: true,
@@ -78,8 +76,6 @@ function toggleMessageComposer() {
  * Load schema for a channel
  */
 async function loadSchema(service, channelName, direction) {
-    const schemaViewer = document.getElementById('schemaViewer');
-
     try {
         const localTopology = await fetch('/q/messaging-topology').then(r => r.json());
         const isLocal = localTopology.serviceName === service;
@@ -91,29 +87,14 @@ async function loadSchema(service, channelName, direction) {
             schemaUrl = await findRemoteSchemaUrl(service, channelName, direction);
         }
 
-        if (!schemaUrl) {
-            schemaViewer.innerHTML = createWarningMessage(
-                '⚠️ Could not reach service: ' + service,
-                'The service may be offline or not accessible'
-            );
-            return;
-        }
-
         const response = await fetch(schemaUrl);
 
         if (response.ok) {
             const schema = await response.json();
             currentSchema = schema; // Store schema for form generation
-            schemaViewer.innerHTML = '<pre style="margin:0;">' +
-                JSON.stringify(schema, null, 2) + '</pre>';
-        } else {
-            schemaViewer.innerHTML = createInfoMessage(
-                'Schema information not available',
-                '💡 Add fields to your message class to enable schema introspection'
-            );
         }
     } catch (error) {
-        schemaViewer.innerHTML = createErrorMessage('Failed to load schema: ' + error.message);
+
     }
 }
 

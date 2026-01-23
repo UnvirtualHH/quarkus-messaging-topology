@@ -1,5 +1,7 @@
 package de.prgrm.topology.runtime.model;
 
+import java.util.Map;
+
 public class ChannelInfo {
     private String channelName;
     private String direction; // incoming/outgoing
@@ -7,6 +9,26 @@ public class ChannelInfo {
     private String methodName;
     private String topic;
     private String connector;
+
+    private Map<String, Object> schema;
+    private Map<String, Object> examplePayload;
+
+    // Alle Getter/Setter + neue:
+    public Map<String, Object> getSchema() {
+        return schema;
+    }
+
+    public void setSchema(Map<String, Object> schema) {
+        this.schema = schema;
+    }
+
+    public Map<String, Object> getExamplePayload() {
+        return examplePayload;
+    }
+
+    public void setExamplePayload(Map<String, Object> examplePayload) {
+        this.examplePayload = examplePayload;
+    }
 
     public ChannelInfo() {
     }

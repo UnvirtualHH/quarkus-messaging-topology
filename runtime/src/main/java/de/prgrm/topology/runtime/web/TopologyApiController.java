@@ -1,6 +1,5 @@
 package de.prgrm.topology.runtime.web;
 
-import java.util.List;
 import java.util.Map;
 
 import jakarta.inject.Inject;
@@ -30,51 +29,6 @@ public class TopologyApiController {
     @Produces(MediaType.APPLICATION_JSON)
     public TopologyInfo getTopology() {
         return TopologyRegistry.INSTANCE.getTopology();
-    }
-
-    @GET
-    @Path("/services")
-    @Produces(MediaType.APPLICATION_JSON)
-    public List<String> getRegisteredServices() {
-        return serviceRegistry.getRegisteredServices();
-    }
-
-    @GET
-    @Path("/schema")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getSchema(@QueryParam("channel") String channel,
-            @QueryParam("direction") String direction) {
-        try {
-            Map<String, Object> schema = schemaIntrospector.getSchema(channel, direction);
-
-            if (schema.isEmpty()) {
-                return Response.status(404)
-                        .entity(Map.of("error", "Schema not found for channel: " + channel))
-                        .build();
-            }
-
-            return Response.ok(schema).build();
-        } catch (Exception e) {
-            return Response.status(500)
-                    .entity(Map.of("error", e.getMessage()))
-                    .build();
-        }
-    }
-
-    @GET
-    @Path("/example")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getExample(@QueryParam("channel") String channel,
-            @QueryParam("direction") String direction) {
-        try {
-            Map<String, Object> example = schemaIntrospector.getExamplePayload(channel, direction);
-            return Response.ok(example).build();
-        } catch (Exception e) {
-            return Response.ok(Map.of(
-                    "id", "example-" + System.currentTimeMillis(),
-                    "message", "Example payload",
-                    "timestamp", java.time.Instant.now().toString())).build();
-        }
     }
 
     @POST

@@ -1,4 +1,3 @@
-// deployment/src/main/resources/dev-ui/qwc-messaging-topology.js
 import { LitElement, html, css } from 'lit';
 import { JsonRpc } from 'jsonrpc';
 import '@vaadin/grid';

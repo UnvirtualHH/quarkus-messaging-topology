@@ -32,47 +32,58 @@ public class SchemaIntrospector {
             if (channel.getChannelName().equals(channelName) &&
                     channel.getDirection().equals(direction)) {
 
-                try {
-                    ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-                    Class<?> clazz = contextClassLoader.loadClass(channel.getClassName());
-                    System.out.println("      ✓ Class loaded: " + clazz.getName());
+                Class<?> messageType = null;
 
-                    Class<?> messageType = findMessageTypeFromField(clazz, channel.getMethodName());
-
-                    if (messageType != null) {
-                        System.out.println("      ✓ Message type found from field: " + messageType.getName());
-                    } else {
-                        Method method = findMethod(clazz, channel.getMethodName());
-                        if (method != null) {
-                            messageType = extractMessageType(method, direction);
-                        } else {
-                            System.out.println("      ✗ Method not found");
-                        }
-                    }
-
-                    if (messageType != null) {
-                        Map<String, Object> schema = introspectClass(messageType);
-                        schemaCache.put(key, schema);
-                        return schema;
-                    } else {
-                        System.out.println("      ✗ Message type is null");
-                    }
-                } catch (ClassNotFoundException e) {
+                // Try using messageType from build-time analysis first
+                if (channel.getMessageType() != null) {
                     try {
-                        Class<?> clazz = Class.forName(channel.getClassName(), true,
-                                SchemaIntrospector.class.getClassLoader());
-
-                        Class<?> messageType = findMessageTypeFromField(clazz, channel.getMethodName());
-                        if (messageType != null) {
-                            Map<String, Object> schema = introspectClass(messageType);
-                            schemaCache.put(key, schema);
-                            return schema;
-                        }
-                    } catch (ClassNotFoundException e2) {
-                        System.err.println("      ✗ Also failed with alternative classloader: " + e2.getMessage());
+                        messageType = Thread.currentThread().getContextClassLoader()
+                                .loadClass(channel.getMessageType());
+                        System.out.println("      ✓ Message type loaded from build-time info: " + messageType.getName());
+                    } catch (ClassNotFoundException e) {
+                        System.err.println("      ✗ Could not load message type: " + channel.getMessageType());
                     }
-                } catch (Exception e) {
-                    System.err.println("      ✗ Error: " + e.getMessage());
+                }
+
+                // Fallback to runtime introspection
+                if (messageType == null) {
+                    try {
+                        ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                        Class<?> clazz = contextClassLoader.loadClass(channel.getClassName());
+                        System.out.println("      ✓ Class loaded: " + clazz.getName());
+
+                        messageType = findMessageTypeFromField(clazz, channel.getMethodName());
+
+                        if (messageType != null) {
+                            System.out.println("      ✓ Message type found from field: " + messageType.getName());
+                        } else {
+                            Method method = findMethod(clazz, channel.getMethodName());
+                            if (method != null) {
+                                messageType = extractMessageType(method, direction);
+                            } else {
+                                System.out.println("      ✗ Method not found");
+                            }
+                        }
+                    } catch (ClassNotFoundException e) {
+                        try {
+                            Class<?> clazz = Class.forName(channel.getClassName(), true,
+                                    SchemaIntrospector.class.getClassLoader());
+
+                            messageType = findMessageTypeFromField(clazz, channel.getMethodName());
+                        } catch (ClassNotFoundException e2) {
+                            System.err.println("      ✗ Also failed with alternative classloader: " + e2.getMessage());
+                        }
+                    } catch (Exception e) {
+                        System.err.println("      ✗ Error: " + e.getMessage());
+                    }
+                }
+
+                if (messageType != null) {
+                    Map<String, Object> schema = introspectClass(messageType);
+                    schemaCache.put(key, schema);
+                    return schema;
+                } else {
+                    System.out.println("      ✗ Message type is null");
                 }
             }
         }

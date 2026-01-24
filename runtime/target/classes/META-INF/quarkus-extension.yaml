@@ -1,6 +1,14 @@
 ---
-name: "ScyllaDB Orm"
+name: "Messaging Topology"
+description: "Visualize and explore your Quarkus Messaging topology"
 metadata:
+  keywords:
+  - "messaging"
+  - "topology"
+  - "reactive-messaging"
+  categories:
+  - "messaging"
+  status: "preview"
   built-with-quarkus-core: "3.30.6"
   requires-quarkus-core: "[3.30,)"
   minimum-java-version: "21"
@@ -25,4 +33,3 @@ metadata:
   - "io.quarkus:quarkus-qute"
   - "io.quarkus:quarkus-rest-qute"
 artifact: "de.prgrm.quarkus:quarkus-messaging-topology::jar:1.0.1-SNAPSHOT"
-description: "Quarkus extension integrating Topology view"

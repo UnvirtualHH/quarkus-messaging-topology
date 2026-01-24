@@ -41,6 +41,13 @@ public class ServiceRegistry {
         try {
             Files.createDirectories(Paths.get(config.directory()));
 
+            // Always enrich with schema for live topology
+            TopologyInfo topology = TopologyRegistry.INSTANCE.getTopology();
+            if (topology != null) {
+                enrichWithSchema(topology);
+                System.out.println("✅ Topology enriched with schemas");
+            }
+
             if (config.autoSave()) {
                 saveLocalTopology();
                 System.out.println("📝 Topology saved to " + config.directory());
@@ -73,9 +80,7 @@ public class ServiceRegistry {
                 topology.setProjectName(config.projectName().get());
             }
 
-            if (config.includeSchema()) {
-                enrichWithSchema(topology);
-            }
+            // Schema is already enriched in onStart(), no need to do it again
 
             String filename = topology.getServiceName() + ".json";
             Path file = Paths.get(config.directory(), filename);

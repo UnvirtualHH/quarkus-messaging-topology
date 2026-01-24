@@ -80,57 +80,41 @@ async function loadSchema(service, channelName, direction) {
         const localTopology = await fetch('/q/messaging-topology').then(r => r.json());
         const isLocal = localTopology.serviceName === service;
 
-        let schemaUrl;
+        let topology;
         if (isLocal) {
-            schemaUrl = `/q/messaging-topology/schema?channel=${channelName}&direction=${direction}`;
+            topology = localTopology;
         } else {
-            schemaUrl = await findRemoteSchemaUrl(service, channelName, direction);
-        }
-
-        const response = await fetch(schemaUrl);
-
-        if (response.ok) {
-            const schema = await response.json();
-            currentSchema = schema; // Store schema for form generation
-        }
-    } catch (error) {
-
-    }
-}
-
-/**
- * Find remote schema URL for a service
- */
-async function findRemoteSchemaUrl(serviceName, channelName, direction) {
-    try {
-        const response = await fetch('/q/messaging-topology/services');
-        if (!response.ok) {
-            console.error('Failed to get service list');
-            return null;
-        }
-
-        const services = await response.json();
-
-        for (const serviceUrl of services) {
-            try {
-                const topologyResponse = await fetch(`${serviceUrl}/q/messaging-topology`);
-                if (topologyResponse.ok) {
-                    const topology = await topologyResponse.json();
-                    if (topology.serviceName === serviceName) {
-                        return `${serviceUrl}/q/messaging-topology/schema?channel=${channelName}&direction=${direction}`;
-                    }
+            // Try to get remote topology
+            const remoteUrl = await findRemoteServiceUrl(service);
+            if (remoteUrl) {
+                const response = await fetch(`${remoteUrl}/q/messaging-topology`);
+                if (response.ok) {
+                    topology = await response.json();
                 }
-            } catch (e) {
-                console.log('Service not reachable:', serviceUrl);
             }
         }
 
-        return null;
+        if (topology && topology.channels) {
+            // Find the matching channel and extract its schema
+            const channel = topology.channels.find(ch =>
+                ch.channelName === channelName && ch.direction === direction
+            );
+
+            if (channel && channel.schema) {
+                currentSchema = channel.schema;
+                console.log('✅ Schema loaded:', currentSchema);
+            } else {
+                console.log('⚠️ No schema found for channel');
+                currentSchema = null;
+            }
+        }
     } catch (error) {
-        console.error('Error finding remote service:', error);
-        return null;
+        console.error('Failed to load schema:', error);
+        currentSchema = null;
     }
 }
+
+// Removed: findRemoteSchemaUrl - no longer needed as schema is in topology response
 
 /**
  * Load example payload for a channel
@@ -142,21 +126,27 @@ async function loadExamplePayload() {
         const localTopology = await fetch('/q/messaging-topology').then(r => r.json());
         const isLocal = localTopology.serviceName === currentChannel.service;
 
-        let exampleUrl;
+        let topology;
         if (isLocal) {
-            exampleUrl = `/q/messaging-topology/example?channel=${currentChannel.channelName}&direction=${currentChannel.direction}`;
+            topology = localTopology;
         } else {
-            const baseUrl = await findRemoteServiceUrl(currentChannel.service);
-            if (baseUrl) {
-                exampleUrl = `${baseUrl}/q/messaging-topology/example?channel=${currentChannel.channelName}&direction=${currentChannel.direction}`;
+            const remoteUrl = await findRemoteServiceUrl(currentChannel.service);
+            if (remoteUrl) {
+                const response = await fetch(`${remoteUrl}/q/messaging-topology`);
+                if (response.ok) {
+                    topology = await response.json();
+                }
             }
         }
 
-        if (exampleUrl) {
-            const response = await fetch(exampleUrl);
-            if (response.ok) {
-                const example = await response.json();
-                textarea.value = JSON.stringify(example, null, 2);
+        if (topology && topology.channels) {
+            const channel = topology.channels.find(ch =>
+                ch.channelName === currentChannel.channelName &&
+                ch.direction === currentChannel.direction
+            );
+
+            if (channel && channel.examplePayload) {
+                textarea.value = JSON.stringify(channel.examplePayload, null, 2);
                 return;
             }
         }
@@ -408,20 +398,27 @@ async function populateFormWithExample() {
         const localTopology = await fetch('/q/messaging-topology').then(r => r.json());
         const isLocal = localTopology.serviceName === currentChannel.service;
 
-        let exampleUrl;
+        let topology;
         if (isLocal) {
-            exampleUrl = `/q/messaging-topology/example?channel=${currentChannel.channelName}&direction=${currentChannel.direction}`;
+            topology = localTopology;
         } else {
-            const baseUrl = await findRemoteServiceUrl(currentChannel.service);
-            if (baseUrl) {
-                exampleUrl = `${baseUrl}/q/messaging-topology/example?channel=${currentChannel.channelName}&direction=${currentChannel.direction}`;
+            const remoteUrl = await findRemoteServiceUrl(currentChannel.service);
+            if (remoteUrl) {
+                const response = await fetch(`${remoteUrl}/q/messaging-topology`);
+                if (response.ok) {
+                    topology = await response.json();
+                }
             }
         }
 
-        if (exampleUrl) {
-            const response = await fetch(exampleUrl);
-            if (response.ok) {
-                const example = await response.json();
+        if (topology && topology.channels) {
+            const channel = topology.channels.find(ch =>
+                ch.channelName === currentChannel.channelName &&
+                ch.direction === currentChannel.direction
+            );
+
+            if (channel && channel.examplePayload) {
+                const example = channel.examplePayload;
 
                 // Populate form fields with example values
                 for (const [fieldName, value] of Object.entries(example)) {

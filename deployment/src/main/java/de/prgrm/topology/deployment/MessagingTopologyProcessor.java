@@ -1,6 +1,7 @@
 package de.prgrm.topology.deployment;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.microprofile.config.Config;
@@ -85,6 +86,15 @@ public class MessagingTopologyProcessor {
             ChannelInfo channelInfo = createChannelInfo(channelName, "incoming",
                     method.declaringClass().name().toString(), method.name());
 
+            // Extract message type from method parameter
+            if (method.parametersCount() > 0) {
+                Type paramType = method.parameterType(0);
+                Class<?> messageType = extractMessageTypeFromType(paramType);
+                if (messageType != null) {
+                    channelInfo.setMessageType(messageType.getName());
+                }
+            }
+
             topology.addChannel(channelInfo);
         }
 
@@ -98,6 +108,13 @@ public class MessagingTopologyProcessor {
 
             ChannelInfo channelInfo = createChannelInfo(channelName, "outgoing",
                     method.declaringClass().name().toString(), method.name());
+
+            // Extract message type from return type
+            Type returnType = method.returnType();
+            Class<?> messageType = extractMessageTypeFromType(returnType);
+            if (messageType != null) {
+                channelInfo.setMessageType(messageType.getName());
+            }
 
             topology.addChannel(channelInfo);
         }
@@ -115,6 +132,12 @@ public class MessagingTopologyProcessor {
 
             ChannelInfo channelInfo = createChannelInfo(channelName, direction,
                     field.declaringClass().name().toString(), field.name());
+
+            // Extract message type for schema at build time
+            Class<?> messageType = extractMessageTypeFromField(fieldType);
+            if (messageType != null) {
+                channelInfo.setMessageType(messageType.getName());
+            }
 
             topology.addChannel(channelInfo);
         }
@@ -190,5 +213,37 @@ public class MessagingTopologyProcessor {
         }
 
         return channelInfo;
+    }
+
+    private Class<?> extractMessageTypeFromField(Type fieldType) {
+        return extractMessageTypeFromType(fieldType);
+    }
+
+    private Class<?> extractMessageTypeFromType(Type type) {
+        if (type.kind() == Type.Kind.PARAMETERIZED_TYPE) {
+            ParameterizedType pType = type.asParameterizedType();
+            List<Type> args = pType.arguments();
+
+            if (!args.isEmpty()) {
+                Type firstArg = args.get(0);
+                if (firstArg.kind() == Type.Kind.CLASS) {
+                    try {
+                        return Class.forName(firstArg.name().toString(), false,
+                                Thread.currentThread().getContextClassLoader());
+                    } catch (ClassNotFoundException e) {
+                        // Class not available at build time
+                    }
+                }
+            }
+        } else if (type.kind() == Type.Kind.CLASS) {
+            // Direct type (not wrapped in Emitter, Multi, etc.)
+            try {
+                return Class.forName(type.name().toString(), false,
+                        Thread.currentThread().getContextClassLoader());
+            } catch (ClassNotFoundException e) {
+                // Class not available at build time
+            }
+        }
+        return null;
     }
 }

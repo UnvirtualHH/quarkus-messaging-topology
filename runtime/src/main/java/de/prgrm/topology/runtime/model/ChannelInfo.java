@@ -9,6 +9,7 @@ public class ChannelInfo {
     private String methodName;
     private String topic;
     private String connector;
+    private String messageType; // Full class name of the message type
 
     private Map<String, Object> schema;
     private Map<String, Object> examplePayload;
@@ -87,5 +88,13 @@ public class ChannelInfo {
 
     public void setConnector(String connector) {
         this.connector = connector;
+    }
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
     }
 }

@@ -55,4 +55,11 @@ public interface TopologyConfig {
     @WithName("include-schema")
     @WithDefault("true")
     boolean includeSchema();
+
+    /**
+     * Automatically cleanup (delete) topology file on shutdown
+     */
+    @WithName("cleanup-on-shutdown")
+    @WithDefault("true")
+    boolean cleanupOnShutdown();
 }

@@ -61,7 +61,7 @@ public class ServiceRegistry {
     }
 
     void onStop(@Observes ShutdownEvent event) {
-        if (config.enabled()) {
+        if (config.enabled() && config.cleanupOnShutdown()) {
             deleteLocalTopology();
         }
     }

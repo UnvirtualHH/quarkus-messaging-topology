@@ -11,12 +11,15 @@ public class MessagingTopologyDevUIProcessor {
     CardPageBuildItem createCard() {
         CardPageBuildItem card = new CardPageBuildItem();
 
-        card.addBuildTimeData("localTopology", "/META-INF/resources/q/messaging-topology");
-
-        card.addPage(Page.webComponentPageBuilder()
-                .title("Messaging Topology")
+        card.addPage(Page.externalPageBuilder("Topology Viewer")
                 .icon("font-awesome-solid:diagram-project")
-                .componentLink("qwc-messaging-topology.js"));
+                .url("/q/messaging-topology-viewer")
+                .isHtmlContent());
+
+        card.addPage(Page.externalPageBuilder("Topology API")
+                .icon("font-awesome-solid:code")
+                .url("/q/messaging-topology")
+                .isJsonContent());
 
         return card;
     }

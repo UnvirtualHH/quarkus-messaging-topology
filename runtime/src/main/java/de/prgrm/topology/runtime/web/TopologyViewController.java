@@ -39,28 +39,18 @@ public class TopologyViewController {
 
     @GET
     @Produces(MediaType.TEXT_HTML)
-    public TemplateInstance viewer(@QueryParam("auto") @DefaultValue("true") boolean autoDiscover) {
+    public TemplateInstance viewer() {
+        List<TopologyInfo> allTopologies = serviceRegistry.getAllTopologies();
 
-        TopologyInfo localTopology = getLocalTopology();
-        List<TopologyInfo> allTopologies = new ArrayList<>();
-        allTopologies.add(localTopology);
-
-        List<String> serviceUrls = new ArrayList<>();
-        List<String> failedServices = new ArrayList<>();
-
-        if (autoDiscover) {
-            serviceUrls = serviceRegistry.getRegisteredServices();
-
-            loadRemoteTopologies(serviceUrls, allTopologies, failedServices);
-        }
+        System.out.println("📊 Loaded " + allTopologies.size() + " topologies from files");
 
         TopologyViewModel model = new TopologyViewModel(
                 allTopologies,
-                serviceUrls.size(),
-                failedServices);
+                allTopologies.size(),
+                Collections.emptyList() // Keine failed services bei file-basiert
+        );
 
         String mermaidDiagram = mermaidGenerator.generate(allTopologies);
-
         return Templates.topologyViewer(model, mermaidDiagram);
     }
 

@@ -1,9 +1,10 @@
-name: ScyllaDB Orm
-#description: Do something useful.
+name: Messaging Topology
+description: Visualize and explore your Quarkus Messaging topology
 metadata:
-#  keywords:
-#    - neo4j-ogm
-#  guide: https://docs.quarkiverse.io/neo4j-ogm/dev/ # To create and publish this guide, see https://github.com/quarkiverse/quarkiverse/wiki#documenting-your-extension
-#  categories:
-#    - "miscellaneous"
-#  status: "preview"
+  keywords:
+    - messaging
+    - topology
+    - reactive-messaging
+  categories:
+    - "messaging"
+  status: "preview"

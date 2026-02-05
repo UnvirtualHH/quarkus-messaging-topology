@@ -69,8 +69,8 @@ Interactive Mermaid diagram showing all messaging channels:
 
 ```
 graph LR
-    grumbl.created -->|GrumblCreatedEvent| ServiceA
-    ServiceA -->|GrumblProcessedEvent| grumbl.processed
+    order.created -->|OrderCreatedEvent| ServiceA
+    ServiceA -->|OrderProcessedEvent| order.processed
     user.created -->|UserCreatedEvent| ServiceB
     ServiceB -->|UserEnrichedEvent| user.enriched
 ```
@@ -100,11 +100,11 @@ The extension scans your code at build time using Jandex to discover:
 @ApplicationScoped
 public class MessageProcessor {
 
-    @Incoming("grumbl.created")
-    @Outgoing("grumbl.processed")
-    public GrumblProcessedEvent process(GrumblCreatedEvent event) {
+    @Incoming("order.created")
+    @Outgoing("order.processed")
+    public OrderProcessedEvent process(OrderCreatedEvent event) {
         // Your business logic
-        return new GrumblProcessedEvent(event.id(), ...);
+        return new OrderProcessedEvent(event.id(), ...);
     }
 }
 ```
@@ -163,10 +163,10 @@ from dataclasses import dataclass
 from typing import List
 
 @dataclass
-class GrumblCreatedEvent:
+class OrderCreatedEvent:
     id: str
-    text: str
-    authorId: str
+    customerId: str
+    amount: float
     timestamp: str
 ```
 
@@ -181,9 +181,9 @@ topology = MessagingTopology(
 )
 
 topology.register_incoming(
-    channel_name="grumbl.created",
-    message_class=GrumblCreatedEvent,
-    topic="persistent://public/default/grumbl.created"
+    channel_name="order.created",
+    message_class=OrderCreatedEvent,
+    topic="persistent://public/default/order.created"
 )
 
 topology.save()

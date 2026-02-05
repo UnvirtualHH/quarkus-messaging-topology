@@ -15,6 +15,23 @@
 
     <description>Quarkus extension integrating Topology view</description>
 
+    <url>https://github.com/UnvirtualHH/uarkus-messaging-topology</url>
+
+    <scm>
+        <connection>scm:git:git@github.com:UnvirtualHH/quarkus-messaging-topology.git</connection>
+        <developerConnection>scm:git:git@github.com:UnvirtualHH/uarkus-messaging-topology.git</developerConnection>
+        <url>https://github.com/UnvirtualHH/uarkus-messaging-topology</url>
+        <tag>v1.0.0</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>fhell</id>
+            <name>Florian Hell</name>
+            <email>fhell@prgrm.de</email>
+        </developer>
+    </developers>
+
     <modules>
         <module>deployment</module>
         <module>runtime</module>

@@ -22,11 +22,11 @@
 
     <properties>
         <compiler-plugin.version>3.14.1</compiler-plugin.version>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.30.6</quarkus.version>
-        <javapoet.version>0.7.0</javapoet.version>
+        <quarkus.version>3.31.2</quarkus.version>
+        <javapoet.version>0.8.0</javapoet.version>
         <cassandra-driver.version>4.19.0</cassandra-driver.version>
     </properties>
 

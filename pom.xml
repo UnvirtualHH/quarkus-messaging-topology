@@ -15,6 +15,23 @@
 
     <description>Quarkus extension integrating Topology view</description>
 
+    <url>https://github.com/UnvirtualHH/uarkus-messaging-topology</url>
+
+    <scm>
+        <connection>scm:git:git@github.com:UnvirtualHH/quarkus-messaging-topology.git</connection>
+        <developerConnection>scm:git:git@github.com:UnvirtualHH/uarkus-messaging-topology.git</developerConnection>
+        <url>https://github.com/UnvirtualHH/uarkus-messaging-topology</url>
+        <tag>v1.0.0</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>fhell</id>
+            <name>Florian Hell</name>
+            <email>fhell@prgrm.de</email>
+        </developer>
+    </developers>
+
     <modules>
         <module>deployment</module>
         <module>runtime</module>
@@ -22,11 +39,11 @@
 
     <properties>
         <compiler-plugin.version>3.14.1</compiler-plugin.version>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.30.6</quarkus.version>
-        <javapoet.version>0.7.0</javapoet.version>
+        <quarkus.version>3.31.2</quarkus.version>
+        <javapoet.version>0.8.0</javapoet.version>
         <cassandra-driver.version>4.19.0</cassandra-driver.version>
     </properties>
 

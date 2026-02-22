@@ -27,7 +27,7 @@ Add the extension to your Quarkus project:
 <dependency>
     <groupId>de.prgrm.quarkus</groupId>
     <artifactId>quarkus-messaging-topology</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 

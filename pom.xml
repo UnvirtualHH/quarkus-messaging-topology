@@ -9,7 +9,7 @@
     </parent>
     <groupId>de.prgrm.quarkus</groupId>
     <artifactId>quarkus-messaging-topology-parent</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.1</version>
     <packaging>pom</packaging>
     <name>Quarkus Topology Parent</name>
 
@@ -60,6 +60,33 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <!-- Override quarkiverse-parent's impsort-maven-plugin until it supports Java 25 -->
+            <plugin>
+                <groupId>net.revelc.code</groupId>
+                <artifactId>impsort-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sort-imports</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.8</version>
+            <executions>
+                <execution>
+                    <id>sign-artifacts</id>
+                    <phase>verify</phase>
+                    <goals>
+                        <goal>sign</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -78,6 +105,32 @@
                     <groupId>io.quarkus</groupId>
                     <artifactId>quarkus-config-doc-maven-plugin</artifactId>
                     <version>${quarkus.version}</version>
+                </plugin>
+
+                <!-- Release + Deployment -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>3.1.1</version>
+                    <configuration>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
+                        <tagNameFormat>v@{project.version}</tagNameFormat>
+                        <preparationGoals>clean verify</preparationGoals>
+                        <goals>clean verify org.sonatype.central:central-publishing-maven-plugin:publish</goals>
+                        <releaseProfiles>release</releaseProfiles>
+                    </configuration>
+                </plugin>
+
+                <!-- Central publishing -->
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>0.9.0</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <publishingServerId>central</publishingServerId>
+                        <autoPublish>true</autoPublish>
+                    </configuration>
                 </plugin>
 
             </plugins>

@@ -28,7 +28,7 @@ public class MermaidDiagramGenerator {
             for (ChannelInfo channel : topology.getChannels()) {
                 String topic = channel.getTopic() != null ? channel.getTopic() : channel.getChannelName();
 
-                topicConnections.computeIfAbsent(topic, k -> new HashSet<>())
+                topicConnections.computeIfAbsent(topic, _ -> new HashSet<>())
                         .add(new Connection(topology.getServiceName(), channel.getMethodName(), channel.getDirection()));
             }
         }
@@ -52,8 +52,8 @@ public class MermaidDiagramGenerator {
             String topicId = sanitize("topic_" + topic);
             Set<Connection> connections = entry.getValue();
 
-            long producers = connections.stream().filter(c -> "outgoing".equals(c.direction)).count();
-            long consumers = connections.stream().filter(c -> "incoming".equals(c.direction)).count();
+            long producers = connections.stream().filter(c -> "outgoing".equals(c.direction())).count();
+            long consumers = connections.stream().filter(c -> "incoming".equals(c.direction())).count();
 
             mermaid.append("    ").append(topicId)
                     .append("((\"💬 ").append(topic)
@@ -68,15 +68,15 @@ public class MermaidDiagramGenerator {
             String topicId = sanitize("topic_" + entry.getKey());
 
             for (Connection conn : entry.getValue()) {
-                String serviceId = sanitize(conn.serviceName);
+                String serviceId = sanitize(conn.serviceName());
 
-                if ("outgoing".equals(conn.direction)) {
+                if ("outgoing".equals(conn.direction())) {
                     mermaid.append("    ").append(serviceId)
-                            .append(" -->|\"").append(conn.method).append("\"| ")
+                            .append(" -->|\"").append(conn.method()).append("\"| ")
                             .append(topicId).append("\n");
                 } else {
                     mermaid.append("    ").append(topicId)
-                            .append(" -->|\"").append(conn.method).append("\"| ")
+                            .append(" -->|\"").append(conn.method()).append("\"| ")
                             .append(serviceId).append("\n");
                 }
             }
@@ -111,32 +111,6 @@ public class MermaidDiagramGenerator {
         return id.replaceAll("[^a-zA-Z0-9_]", "_");
     }
 
-    private static class Connection {
-        final String serviceName;
-        final String method;
-        final String direction;
-
-        Connection(String serviceName, String method, String direction) {
-            this.serviceName = serviceName;
-            this.method = method;
-            this.direction = direction;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (!(o instanceof Connection))
-                return false;
-            Connection that = (Connection) o;
-            return Objects.equals(serviceName, that.serviceName) &&
-                    Objects.equals(method, that.method) &&
-                    Objects.equals(direction, that.direction);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(serviceName, method, direction);
-        }
+    private record Connection(String serviceName, String method, String direction) {
     }
 }

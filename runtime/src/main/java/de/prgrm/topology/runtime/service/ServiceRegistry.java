@@ -1,4 +1,3 @@
-// runtime/src/main/java/de/prgrm/topology/runtime/service/ServiceRegistry.java
 package de.prgrm.topology.runtime.service;
 
 import java.io.IOException;
@@ -12,6 +11,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
+import org.eclipse.microprofile.config.Config;
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.prgrm.topology.runtime.config.TopologyConfig;
@@ -24,45 +26,65 @@ import io.quarkus.runtime.StartupEvent;
 @ApplicationScoped
 public class ServiceRegistry {
 
+    private static final Logger LOG = Logger.getLogger(ServiceRegistry.class);
+
     @Inject
-    TopologyConfig config;
+    TopologyConfig topologyConfig;
+
+    @Inject
+    Config config;
 
     @Inject
     SchemaIntrospector schemaIntrospector;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    @Inject
+    ObjectMapper mapper;
 
     void onStart(@Observes StartupEvent event) {
-        if (!config.enabled()) {
-            System.out.println("🔇 Messaging Topology is disabled");
+        if (!topologyConfig.enabled()) {
+            LOG.info("Messaging Topology is disabled");
             return;
         }
 
         try {
-            Files.createDirectories(Paths.get(config.directory()));
+            Files.createDirectories(Paths.get(topologyConfig.directory()));
 
-            // Always enrich with schema for live topology
             TopologyInfo topology = TopologyRegistry.INSTANCE.getTopology();
             if (topology != null) {
+                resolveChannelConfig(topology);
                 enrichWithSchema(topology);
-                System.out.println("✅ Topology enriched with schemas");
+                LOG.info("Topology resolved and enriched with schemas");
             }
 
-            if (config.autoSave()) {
+            if (topologyConfig.autoSave()) {
                 saveLocalTopology();
-                System.out.println("📝 Topology saved to " + config.directory());
-                if (config.projectName().isPresent()) {
-                    System.out.println("   Project: " + config.projectName().get());
-                }
+                LOG.infof("Topology saved to %s", topologyConfig.directory());
+                topologyConfig.projectName().ifPresent(name -> LOG.infof("Project: %s", name));
             }
         } catch (IOException e) {
-            System.err.println("⚠️ Warning: Could not create topology dir: " + e.getMessage());
+            LOG.warnf("Could not create topology dir: %s", e.getMessage());
         }
     }
 
     void onStop(@Observes ShutdownEvent event) {
-        if (config.enabled() && config.cleanupOnShutdown()) {
+        if (topologyConfig.enabled() && topologyConfig.cleanupOnShutdown()) {
             deleteLocalTopology();
+        }
+    }
+
+    private void resolveChannelConfig(TopologyInfo topology) {
+        for (ChannelInfo channel : topology.getChannels()) {
+            String channelName = channel.getChannelName();
+            String direction = channel.getDirection();
+
+            String topicKey = "mp.messaging." + direction + "." + channelName + ".topic";
+            String connectorKey = "mp.messaging." + direction + "." + channelName + ".connector";
+
+            Optional<String> topic = config.getOptionalValue(topicKey, String.class);
+            channel.setTopic(topic.orElse(channelName));
+
+            Optional<String> connector = config.getOptionalValue(connectorKey, String.class);
+            channel.setConnector(connector.orElse(null));
         }
     }
 
@@ -73,24 +95,19 @@ public class ServiceRegistry {
                 return;
             }
 
-            config.serviceName().ifPresent(topology::setServiceName);
-            config.groupId().ifPresent(topology::setGroupId);
-
-            if (config.projectName().isPresent()) {
-                topology.setProjectName(config.projectName().get());
-            }
-
-            // Schema is already enriched in onStart(), no need to do it again
+            topologyConfig.serviceName().ifPresent(topology::setServiceName);
+            topologyConfig.groupId().ifPresent(topology::setGroupId);
+            topologyConfig.projectName().ifPresent(topology::setProjectName);
 
             String filename = topology.getServiceName() + ".json";
-            Path file = Paths.get(config.directory(), filename);
+            Path file = Paths.get(topologyConfig.directory(), filename);
 
             String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(topology);
             Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
             saveServiceUrl(topology.getServiceName());
         } catch (IOException e) {
-            System.err.println("⚠️ Warning: Could not save topology: " + e.getMessage());
+            LOG.warnf("Could not save topology: %s", e.getMessage());
         }
     }
 
@@ -107,7 +124,7 @@ public class ServiceRegistry {
                         channel.getDirection());
                 channel.setExamplePayload(example);
             } catch (Exception e) {
-                // Schema nicht verfügbar - kein Problem
+                LOG.debugf("Schema not available for channel %s: %s", channel.getChannelName(), e.getMessage());
             }
         }
     }
@@ -117,7 +134,7 @@ public class ServiceRegistry {
         String host = System.getProperty("quarkus.http.host", "localhost");
         String serviceUrl = "http://" + host + ":" + port;
 
-        Path urlFile = Paths.get(config.directory(), serviceName + ".url");
+        Path urlFile = Paths.get(topologyConfig.directory(), serviceName + ".url");
         Files.writeString(urlFile, serviceUrl);
     }
 
@@ -126,43 +143,42 @@ public class ServiceRegistry {
             TopologyInfo topology = TopologyRegistry.INSTANCE.getTopology();
             if (topology != null) {
                 String serviceName = topology.getServiceName();
-                Files.deleteIfExists(Paths.get(config.directory(), serviceName + ".json"));
-                Files.deleteIfExists(Paths.get(config.directory(), serviceName + ".url"));
-                System.out.println("🗑️ Topology files removed");
+                Files.deleteIfExists(Paths.get(topologyConfig.directory(), serviceName + ".json"));
+                Files.deleteIfExists(Paths.get(topologyConfig.directory(), serviceName + ".url"));
+                LOG.info("Topology files removed");
             }
         } catch (IOException e) {
-            System.err.println("⚠️ Warning: Could not delete topology: " + e.getMessage());
+            LOG.warnf("Could not delete topology: %s", e.getMessage());
         }
     }
 
     public List<TopologyInfo> getAllTopologies() {
-        if (!config.enabled()) {
+        if (!topologyConfig.enabled()) {
             return Collections.emptyList();
         }
 
         List<TopologyInfo> topologies = new ArrayList<>();
 
-        try {
-            Files.list(Paths.get(config.directory()))
-                    .filter(p -> p.toString().endsWith(".json"))
+        try (var files = Files.list(Paths.get(topologyConfig.directory()))) {
+            files.filter(p -> p.toString().endsWith(".json"))
                     .forEach(file -> {
                         try {
                             String json = Files.readString(file);
                             TopologyInfo topology = mapper.readValue(json, TopologyInfo.class);
 
-                            if (config.projectName().isPresent()) {
-                                if (config.projectName().get().equals(topology.getProjectName())) {
+                            if (topologyConfig.projectName().isPresent()) {
+                                if (topologyConfig.projectName().get().equals(topology.getProjectName())) {
                                     loadTopology(topology, file, topologies);
                                 }
                             } else {
                                 loadTopology(topology, file, topologies);
                             }
                         } catch (Exception e) {
-                            System.err.println("  ✗ Failed to load: " + file + " - " + e.getMessage());
+                            LOG.warnf("Failed to load: %s - %s", file, e.getMessage());
                         }
                     });
         } catch (IOException e) {
-            System.err.println("⚠️ Warning: Could not read topologies: " + e.getMessage());
+            LOG.warnf("Could not read topologies: %s", e.getMessage());
         }
 
         return topologies;
@@ -170,13 +186,13 @@ public class ServiceRegistry {
 
     private void loadTopology(TopologyInfo topology, Path file, List<TopologyInfo> topologies) throws IOException {
         String serviceName = file.getFileName().toString().replace(".json", "");
-        Path urlFile = Paths.get(config.directory(), serviceName + ".url");
+        Path urlFile = Paths.get(topologyConfig.directory(), serviceName + ".url");
         if (Files.exists(urlFile)) {
             String serviceUrl = Files.readString(urlFile).trim();
             topology.setServiceUrl(serviceUrl);
         }
 
         topologies.add(topology);
-        System.out.println("  ✓ Loaded: " + serviceName + " (" + topology.getChannels().size() + " channels)");
+        LOG.debugf("Loaded: %s (%d channels)", serviceName, topology.getChannels().size());
     }
 }

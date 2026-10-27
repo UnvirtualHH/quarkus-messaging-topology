@@ -7,23 +7,19 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import org.jboss.logging.Logger;
+
 import de.prgrm.topology.runtime.model.TopologyInfo;
 import de.prgrm.topology.runtime.model.TopologyRegistry;
 import de.prgrm.topology.runtime.service.MessageSender;
-import de.prgrm.topology.runtime.service.SchemaIntrospector;
-import de.prgrm.topology.runtime.service.ServiceRegistry;
 
 @Path("/q/messaging-topology")
 public class TopologyApiController {
 
-    @Inject
-    SchemaIntrospector schemaIntrospector;
+    private static final Logger LOG = Logger.getLogger(TopologyApiController.class);
 
     @Inject
     MessageSender messageSender;
-
-    @Inject
-    ServiceRegistry serviceRegistry;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -36,31 +32,32 @@ public class TopologyApiController {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response sendMessage(Map<String, Object> request) {
+        String channel = (String) request.get("channel");
+        String topic = (String) request.get("topic");
+        Object payload = request.get("payload");
 
-        System.out.println("📨 Send endpoint called");
+        if (channel == null || payload == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", "Missing channel or payload"))
+                    .build();
+        }
 
         try {
-            String channel = (String) request.get("channel");
-            String topic = (String) request.get("topic");
-            Object payload = request.get("payload");
-
-            if (channel == null || payload == null) {
-                return Response.status(400)
-                        .entity(Map.of("error", "Missing channel or payload"))
-                        .build();
-            }
-
             messageSender.send(channel, payload);
-
-            return Response.ok(Map.of(
-                    "success", true,
-                    "message", "Message sent to " + channel,
-                    "channel", channel,
-                    "topic", topic != null ? topic : channel)).build();
-        } catch (Exception e) {
-            return Response.status(500)
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", e.getMessage()))
+                    .build();
+        } catch (IllegalStateException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(Map.of("error", e.getMessage()))
                     .build();
         }
+
+        return Response.ok(Map.of(
+                "success", true,
+                "message", "Message sent to " + channel,
+                "channel", channel,
+                "topic", topic != null ? topic : channel)).build();
     }
 }

@@ -3,7 +3,7 @@ package de.prgrm.topology.runtime.model;
 public class TopologyRegistry {
     public static final TopologyRegistry INSTANCE = new TopologyRegistry();
 
-    private TopologyInfo topology;
+    private volatile TopologyInfo topology;
 
     private TopologyRegistry() {
     }

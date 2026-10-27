@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messaging Topology Viewer</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
     <link rel="stylesheet" href="/q/messaging-topology/static/style.css">
 </head>
 <body>
@@ -12,12 +12,7 @@
         {#include fragments/header.html /}
 
     <div class="content">
-            {#include fragments/discovery-info.html model=model /}
-
-        {#if model.failedServices.size() > 0}
-                {#include fragments/warnings.html failedServices=model.failedServices /}
-        {/if}
-
+            {#include fragments/discovery-info.html stats=model.stats /}
             {#include fragments/stats.html stats=model.stats /}
             {#include fragments/services-grid.html topologies=model.topologies /}
             {#include fragments/mermaid-diagram.html diagram=mermaidDiagram /}

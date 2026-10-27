@@ -3,8 +3,11 @@ package de.prgrm.topology.runtime.service;
 import java.lang.reflect.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.enterprise.context.ApplicationScoped;
+
+import org.jboss.logging.Logger;
 
 import de.prgrm.topology.runtime.model.ChannelInfo;
 import de.prgrm.topology.runtime.model.TopologyInfo;
@@ -13,13 +16,16 @@ import de.prgrm.topology.runtime.model.TopologyRegistry;
 @ApplicationScoped
 public class SchemaIntrospector {
 
-    private final Map<String, Map<String, Object>> schemaCache = new HashMap<>();
+    private static final Logger LOG = Logger.getLogger(SchemaIntrospector.class);
+
+    private final Map<String, Map<String, Object>> schemaCache = new ConcurrentHashMap<>();
 
     public Map<String, Object> getSchema(String channelName, String direction) {
         String key = channelName + ":" + direction;
 
-        if (schemaCache.containsKey(key)) {
-            return schemaCache.get(key);
+        Map<String, Object> cached = schemaCache.get(key);
+        if (cached != null) {
+            return cached;
         }
 
         TopologyInfo topology = TopologyRegistry.INSTANCE.getTopology();
@@ -34,34 +40,32 @@ public class SchemaIntrospector {
 
                 Class<?> messageType = null;
 
-                // Try using messageType from build-time analysis first
                 if (channel.getMessageType() != null) {
                     try {
                         messageType = Thread.currentThread().getContextClassLoader()
                                 .loadClass(channel.getMessageType());
-                        System.out.println("      ✓ Message type loaded from build-time info: " + messageType.getName());
+                        LOG.debugf("Message type loaded from build-time info: %s", messageType.getName());
                     } catch (ClassNotFoundException e) {
-                        System.err.println("      ✗ Could not load message type: " + channel.getMessageType());
+                        LOG.warnf("Could not load message type: %s", channel.getMessageType());
                     }
                 }
 
-                // Fallback to runtime introspection
                 if (messageType == null) {
                     try {
                         ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
                         Class<?> clazz = contextClassLoader.loadClass(channel.getClassName());
-                        System.out.println("      ✓ Class loaded: " + clazz.getName());
+                        LOG.debugf("Class loaded: %s", clazz.getName());
 
                         messageType = findMessageTypeFromField(clazz, channel.getMethodName());
 
                         if (messageType != null) {
-                            System.out.println("      ✓ Message type found from field: " + messageType.getName());
+                            LOG.debugf("Message type found from field: %s", messageType.getName());
                         } else {
                             Method method = findMethod(clazz, channel.getMethodName());
                             if (method != null) {
                                 messageType = extractMessageType(method, direction);
                             } else {
-                                System.out.println("      ✗ Method not found");
+                                LOG.debug("Method not found");
                             }
                         }
                     } catch (ClassNotFoundException e) {
@@ -71,10 +75,10 @@ public class SchemaIntrospector {
 
                             messageType = findMessageTypeFromField(clazz, channel.getMethodName());
                         } catch (ClassNotFoundException e2) {
-                            System.err.println("      ✗ Also failed with alternative classloader: " + e2.getMessage());
+                            LOG.warnf("Also failed with alternative classloader: %s", e2.getMessage());
                         }
                     } catch (Exception e) {
-                        System.err.println("      ✗ Error: " + e.getMessage());
+                        LOG.warnf("Error during schema introspection: %s", e.getMessage());
                     }
                 }
 
@@ -83,12 +87,12 @@ public class SchemaIntrospector {
                     schemaCache.put(key, schema);
                     return schema;
                 } else {
-                    System.out.println("      ✗ Message type is null");
+                    LOG.debug("Message type is null");
                 }
             }
         }
 
-        System.out.println("  ✗ No matching channel found or no schema extracted");
+        LOG.debug("No matching channel found or no schema extracted");
         return Collections.emptyMap();
     }
 
@@ -100,15 +104,8 @@ public class SchemaIntrospector {
     private Class<?> findMessageTypeFromField(Class<?> clazz, String fieldName) {
         try {
             Field field = clazz.getDeclaredField(fieldName);
-
-            Type fieldType = field.getGenericType();
-
-            return extractGenericType(fieldType);
+            return extractGenericType(field.getGenericType());
         } catch (NoSuchFieldException e) {
-            for (Field f : clazz.getDeclaredFields()) {
-                System.out.println("          - " + f.getName() + " : " + f.getType().getSimpleName());
-            }
-
             return null;
         }
     }
@@ -136,20 +133,18 @@ public class SchemaIntrospector {
     }
 
     private Class<?> extractGenericType(Type type) {
-        if (type instanceof ParameterizedType) {
-            ParameterizedType pType = (ParameterizedType) type;
-
+        if (type instanceof ParameterizedType pType) {
             Type[] args = pType.getActualTypeArguments();
 
             if (args.length > 0) {
-                if (args[0] instanceof Class) {
-                    return (Class<?>) args[0];
-                } else if (args[0] instanceof ParameterizedType) {
-                    return (Class<?>) ((ParameterizedType) args[0]).getRawType();
+                if (args[0] instanceof Class<?> clazz) {
+                    return clazz;
+                } else if (args[0] instanceof ParameterizedType nested) {
+                    return (Class<?>) nested.getRawType();
                 }
             }
-        } else if (type instanceof Class) {
-            return (Class<?>) type;
+        } else if (type instanceof Class<?> clazz) {
+            return clazz;
         }
 
         return null;
@@ -173,11 +168,10 @@ public class SchemaIntrospector {
             fieldSchema.put("type", getJsonType(field.getType()));
             fieldSchema.put("javaType", field.getType().getSimpleName());
 
-            if (field.getGenericType() instanceof ParameterizedType) {
-                ParameterizedType pType = (ParameterizedType) field.getGenericType();
+            if (field.getGenericType() instanceof ParameterizedType pType) {
                 Type[] args = pType.getActualTypeArguments();
-                if (args.length > 0 && args[0] instanceof Class) {
-                    fieldSchema.put("genericType", ((Class<?>) args[0]).getSimpleName());
+                if (args.length > 0 && args[0] instanceof Class<?> argClass) {
+                    fieldSchema.put("genericType", argClass.getSimpleName());
                 }
             }
 

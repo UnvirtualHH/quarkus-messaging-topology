@@ -1,65 +1,42 @@
-// runtime/src/main/java/de/prgrm/topology/runtime/config/TopologyConfig.java
 package de.prgrm.topology.runtime.config;
 
 import java.util.Optional;
 
+import io.quarkus.runtime.annotations.ConfigPhase;
+import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
-import io.smallrye.config.WithName;
 
+@ConfigRoot(phase = ConfigPhase.RUN_TIME)
 @ConfigMapping(prefix = "quarkus.messaging-topology")
 public interface TopologyConfig {
 
-    /**
-     * Enable or disable the messaging topology feature
-     */
-    @WithName("enabled")
+    /** Whether the messaging topology extension is enabled. */
     @WithDefault("true")
     boolean enabled();
 
-    /**
-     * Directory where topology files are stored
-     */
-    @WithName("directory")
+    /** Directory for storing topology files. */
     @WithDefault("/tmp/topology")
     String directory();
 
-    /**
-     * Project name for grouping related services
-     */
-    @WithName("project-name")
+    /** Project name for grouping services. */
     Optional<String> projectName();
 
-    /**
-     * Override the service name (defaults to application name)
-     */
-    @WithName("service-name")
+    /** Service name override. */
     Optional<String> serviceName();
 
-    /**
-     * Group ID for the service (defaults to base package)
-     */
-    @WithName("group-id")
+    /** Group ID for multi-service topology discovery. */
     Optional<String> groupId();
 
-    /**
-     * Automatically save topology on startup
-     */
-    @WithName("auto-save")
+    /** Whether to automatically save topology on startup. */
     @WithDefault("true")
     boolean autoSave();
 
-    /**
-     * Include schema information in topology
-     */
-    @WithName("include-schema")
+    /** Whether to include schema introspection results. */
     @WithDefault("true")
     boolean includeSchema();
 
-    /**
-     * Automatically cleanup (delete) topology file on shutdown
-     */
-    @WithName("cleanup-on-shutdown")
+    /** Whether to clean up topology files on shutdown. */
     @WithDefault("true")
     boolean cleanupOnShutdown();
 }

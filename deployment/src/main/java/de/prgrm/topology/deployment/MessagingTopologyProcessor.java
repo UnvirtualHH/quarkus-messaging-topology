@@ -2,10 +2,7 @@ package de.prgrm.topology.deployment;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.jandex.*;
 
 import de.prgrm.topology.runtime.MessagingTopologyRecorder;
@@ -83,15 +80,15 @@ public class MessagingTopologyProcessor {
             MethodInfo method = annotation.target().asMethod();
             String channelName = annotation.value().asString();
 
-            ChannelInfo channelInfo = createChannelInfo(channelName, "incoming",
+            ChannelInfo channelInfo = new ChannelInfo(
+                    channelName, "incoming",
                     method.declaringClass().name().toString(), method.name());
 
-            // Extract message type from method parameter
             if (method.parametersCount() > 0) {
                 Type paramType = method.parameterType(0);
-                Class<?> messageType = extractMessageTypeFromType(paramType);
+                String messageType = extractMessageTypeName(paramType);
                 if (messageType != null) {
-                    channelInfo.setMessageType(messageType.getName());
+                    channelInfo.setMessageType(messageType);
                 }
             }
 
@@ -106,14 +103,14 @@ public class MessagingTopologyProcessor {
             MethodInfo method = annotation.target().asMethod();
             String channelName = annotation.value().asString();
 
-            ChannelInfo channelInfo = createChannelInfo(channelName, "outgoing",
+            ChannelInfo channelInfo = new ChannelInfo(
+                    channelName, "outgoing",
                     method.declaringClass().name().toString(), method.name());
 
-            // Extract message type from return type
             Type returnType = method.returnType();
-            Class<?> messageType = extractMessageTypeFromType(returnType);
+            String messageType = extractMessageTypeName(returnType);
             if (messageType != null) {
-                channelInfo.setMessageType(messageType.getName());
+                channelInfo.setMessageType(messageType);
             }
 
             topology.addChannel(channelInfo);
@@ -130,26 +127,19 @@ public class MessagingTopologyProcessor {
             Type fieldType = field.type();
             String direction = determineDirection(fieldType);
 
-            ChannelInfo channelInfo = createChannelInfo(channelName, direction,
+            ChannelInfo channelInfo = new ChannelInfo(
+                    channelName, direction,
                     field.declaringClass().name().toString(), field.name());
 
-            // Extract message type for schema at build time
-            Class<?> messageType = extractMessageTypeFromField(fieldType);
+            String messageType = extractMessageTypeName(fieldType);
             if (messageType != null) {
-                channelInfo.setMessageType(messageType.getName());
+                channelInfo.setMessageType(messageType);
             }
 
             topology.addChannel(channelInfo);
         }
 
         recorder.registerTopology(topology);
-    }
-
-    private String getTypeName(Type type) {
-        if (type.kind() == Type.Kind.PARAMETERIZED_TYPE) {
-            return type.asParameterizedType().name().local();
-        }
-        return type.name().local();
     }
 
     private String determineDirection(Type fieldType) {
@@ -178,71 +168,19 @@ public class MessagingTopologyProcessor {
         return "outgoing";
     }
 
-    private ChannelInfo createChannelInfo(String channelName, String direction,
-            String className, String memberName) {
-        ChannelInfo channelInfo = new ChannelInfo(
-                channelName,
-                direction,
-                className,
-                memberName);
-
-        try {
-            Config config = ConfigProvider.getConfig();
-
-            String topicKey = "mp.messaging." + direction + "." + channelName + ".topic";
-            String connectorKey = "mp.messaging." + direction + "." + channelName + ".connector";
-
-            String altTopicKey = "messaging." + direction + "." + channelName + ".topic";
-            String altConnectorKey = "messaging." + direction + "." + channelName + ".connector";
-
-            Optional<String> topic = config.getOptionalValue(topicKey, String.class);
-            if (topic.isEmpty()) {
-                topic = config.getOptionalValue(altTopicKey, String.class);
-            }
-            channelInfo.setTopic(topic.orElse(channelName));
-
-            Optional<String> connector = config.getOptionalValue(connectorKey, String.class);
-            if (connector.isEmpty()) {
-                connector = config.getOptionalValue(altConnectorKey, String.class);
-            }
-            channelInfo.setConnector(connector.orElse("smallrye-pulsar"));
-
-        } catch (Exception e) {
-            channelInfo.setTopic(channelName);
-            channelInfo.setConnector("smallrye-pulsar");
-        }
-
-        return channelInfo;
-    }
-
-    private Class<?> extractMessageTypeFromField(Type fieldType) {
-        return extractMessageTypeFromType(fieldType);
-    }
-
-    private Class<?> extractMessageTypeFromType(Type type) {
+    private String extractMessageTypeName(Type type) {
         if (type.kind() == Type.Kind.PARAMETERIZED_TYPE) {
             ParameterizedType pType = type.asParameterizedType();
             List<Type> args = pType.arguments();
 
             if (!args.isEmpty()) {
-                Type firstArg = args.get(0);
+                Type firstArg = args.getFirst();
                 if (firstArg.kind() == Type.Kind.CLASS) {
-                    try {
-                        return Class.forName(firstArg.name().toString(), false,
-                                Thread.currentThread().getContextClassLoader());
-                    } catch (ClassNotFoundException e) {
-                        // Class not available at build time
-                    }
+                    return firstArg.name().toString();
                 }
             }
         } else if (type.kind() == Type.Kind.CLASS) {
-            // Direct type (not wrapped in Emitter, Multi, etc.)
-            try {
-                return Class.forName(type.name().toString(), false,
-                        Thread.currentThread().getContextClassLoader());
-            } catch (ClassNotFoundException e) {
-                // Class not available at build time
-            }
+            return type.name().toString();
         }
         return null;
     }

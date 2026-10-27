@@ -11,7 +11,12 @@
             {#else}
                 {#for channel in topology.channels}
                     <div class="channel {channel.direction}"
-                         onclick="showChannelDetails('{topology.serviceName}', '{channel.channelName}', '{channel.topic}', '{channel.direction}', '{channel.simpleClassName}', '{channel.methodName}')">
+                         data-service="{topology.serviceName}"
+                         data-channel="{channel.channelName}"
+                         data-topic="{channel.topic}"
+                         data-direction="{channel.direction}"
+                         data-class="{channel.simpleClassName}"
+                         data-method="{channel.methodName}">
                         <span class="channel-icon">{#if channel.direction == 'incoming'}⬇️{#else}⬆️{/if}</span>
                         <span class="channel-name">{channel.topic}</span>
                         <span class="channel-info">ℹ️</span>

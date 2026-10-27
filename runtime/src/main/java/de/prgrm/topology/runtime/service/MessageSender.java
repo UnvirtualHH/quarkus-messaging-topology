@@ -3,6 +3,7 @@ package de.prgrm.topology.runtime.service;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.prgrm.topology.runtime.model.TopologyRegistry;
@@ -14,24 +15,32 @@ public class MessageSender {
     @Inject
     Vertx vertx;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    @Inject
+    ObjectMapper mapper;
 
-    public void send(String channelName, Object payload) throws Exception {
+    public void send(String channelName, Object payload) {
         var topology = TopologyRegistry.INSTANCE.getTopology();
         if (topology == null) {
-            throw new Exception("Topology not initialized");
+            throw new IllegalStateException("Topology not initialized");
         }
 
         boolean channelExists = topology.getChannels().stream()
                 .anyMatch(c -> c.getChannelName().equals(channelName) && "outgoing".equals(c.getDirection()));
 
         if (!channelExists) {
-            throw new Exception("Channel not found or not outgoing: " + channelName);
+            throw new IllegalArgumentException("Channel not found or not outgoing: " + channelName);
         }
 
-        String jsonPayload = payload instanceof String
-                ? (String) payload
-                : mapper.writeValueAsString(payload);
+        String jsonPayload;
+        if (payload instanceof String s) {
+            jsonPayload = s;
+        } else {
+            try {
+                jsonPayload = mapper.writeValueAsString(payload);
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("Could not serialize payload: " + e.getMessage(), e);
+            }
+        }
 
         vertx.eventBus().publish(channelName, jsonPayload);
     }

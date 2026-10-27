@@ -1,23 +1,18 @@
 package de.prgrm.topology.runtime.web.model;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import de.prgrm.topology.runtime.model.TopologyInfo;
 
 public class TopologyViewModel {
     private final List<TopologyWithChannels> topologies;
     private final Stats stats;
-    private final List<String> failedServices;
-    private final int discoveredServicesCount;
 
-    public TopologyViewModel(List<TopologyInfo> topologies, int totalServices, List<String> failedServices) {
+    public TopologyViewModel(List<TopologyInfo> topologies) {
         this.topologies = topologies.stream()
                 .map(TopologyWithChannels::new)
-                .collect(Collectors.toList());
-        this.failedServices = failedServices;
-        this.discoveredServicesCount = totalServices;
-        this.stats = new Stats(topologies);
+                .toList();
+        this.stats = Stats.from(topologies);
     }
 
     public List<TopologyWithChannels> getTopologies() {
@@ -28,23 +23,9 @@ public class TopologyViewModel {
         return stats;
     }
 
-    public List<String> getFailedServices() {
-        return failedServices;
-    }
+    public record Stats(int servicesCount, int topicsCount, int producersCount, int consumersCount) {
 
-    public int getDiscoveredServicesCount() {
-        return discoveredServicesCount;
-    }
-
-    public static class Stats {
-        private final int servicesCount;
-        private final int topicsCount;
-        private final int producersCount;
-        private final int consumersCount;
-
-        public Stats(List<TopologyInfo> topologies) {
-            this.servicesCount = topologies.size();
-
+        static Stats from(List<TopologyInfo> topologies) {
             Set<String> uniqueTopics = new HashSet<>();
             int producers = 0;
             int consumers = 0;
@@ -62,25 +43,7 @@ public class TopologyViewModel {
                 }
             }
 
-            this.topicsCount = uniqueTopics.size();
-            this.producersCount = producers;
-            this.consumersCount = consumers;
-        }
-
-        public int getServicesCount() {
-            return servicesCount;
-        }
-
-        public int getTopicsCount() {
-            return topicsCount;
-        }
-
-        public int getProducersCount() {
-            return producersCount;
-        }
-
-        public int getConsumersCount() {
-            return consumersCount;
+            return new Stats(topologies.size(), uniqueTopics.size(), producers, consumers);
         }
     }
 
@@ -92,7 +55,7 @@ public class TopologyViewModel {
             this.topology = topology;
             this.channels = topology.getChannels().stream()
                     .map(ChannelViewModel::new)
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         public String getServiceName() {

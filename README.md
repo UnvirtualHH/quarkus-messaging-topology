@@ -1,39 +1,37 @@
 # Quarkus Messaging Topology Extension
 
-A Quarkus extension that automatically discovers and visualizes your messaging topology for Eclipse MicroProfile Reactive Messaging applications. Get instant insights into your message flows with interactive diagrams, schema inspection, and cross-service topology aggregation.
+A Quarkus **dev mode** extension that automatically discovers and visualizes the messaging topology of Eclipse MicroProfile Reactive Messaging applications. Get instant insights into your message flows with interactive diagrams, schema inspection, test messages and cross-service topology aggregation.
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![Quarkus](https://img.shields.io/badge/Quarkus-3.31.2-blue)
-![Java](https://img.shields.io/badge/Java-25-orange)
+![Quarkus](https://img.shields.io/badge/Quarkus-3.40.1.1-blue)
+![Java](https://img.shields.io/badge/Java-17%2B-orange)
 
 ## Features
 
 - **Automatic Discovery**: Scans `@Incoming`, `@Outgoing`, and `@Channel` annotations at build time
-- **Schema Introspection**: Automatically generates JSON schemas from message types (POJOs, records, sealed types)
-- **Interactive Visualization**: Mermaid diagrams with real-time topology view
-- **Dev UI Integration**: Seamless integration with Quarkus Dev UI
-- **Multi-Service Support**: Aggregates topology from multiple services across your project
-- **Cross-Language Support**: Python library included for non-Java services
-- **Example Payloads**: Auto-generated example messages for testing
-- **REST API**: Full REST API for topology inspection and schema access
+- **Schema Introspection**: Generates a JSON schema from the fields of your message types (POJOs and records)
+- **Native Dev UI Page**: Interactive diagram of services, topics and message flows, styled with the Dev UI theme (light and dark)
+- **Explore**: Zoom, pan, click on services and topics to see producers, consumers, schemas and implementations
+- **Multi-Service Support**: Aggregates the topology of multiple services running on the same machine
+- **Test Messages**: Send messages through your application's own `Emitter` with auto-generated example payloads
+
+## Dev Mode Only
+
+The extension is a development tool. The Dev UI page, the REST API, its beans and the topology files are **only active in dev mode** (`mvn quarkus:dev`). In test and production mode (including native builds) none of them are registered, so it is safe to keep the dependency in your application.
 
 ## Quick Start
 
 ### 1. Add the Extension
 
-Add the extension to your Quarkus project:
-
 ```xml
 <dependency>
     <groupId>de.prgrm.quarkus</groupId>
     <artifactId>quarkus-messaging-topology</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
 ### 2. Configure (Optional)
-
-Add configuration to `application.properties`:
 
 ```properties
 # Project name for grouping related services
@@ -42,17 +40,11 @@ quarkus.messaging-topology.project-name=my-project
 # Directory where topology files are stored
 quarkus.messaging-topology.directory=/tmp/topology
 
-# Automatically save topology on startup (default: true)
-quarkus.messaging-topology.auto-save=true
-
-# Cleanup topology file on shutdown (default: true)
+# Keep the topology file after shutdown (default: true = delete)
 quarkus.messaging-topology.cleanup-on-shutdown=false
-
-# Include schema information (default: true)
-quarkus.messaging-topology.include-schema=true
 ```
 
-### 3. Start Your Application
+### 3. Start Your Application in Dev Mode
 
 ```bash
 mvn quarkus:dev
@@ -60,20 +52,26 @@ mvn quarkus:dev
 
 ### 4. View the Topology
 
-Open the Quarkus Dev UI at `http://localhost:8080/q/dev-ui` and navigate to the **Messaging Topology** card.
+Open the Quarkus Dev UI at `http://localhost:8080/q/dev-ui` and click **Topology** on the **Messaging Topology** card.
 
-## Screenshots
+> The page is part of the Quarkus Dev UI. If your application shows no Dev UI at `/q/dev-ui`, add `io.quarkus:quarkus-devui` to your dependencies.
 
-### Topology Viewer
-Interactive Mermaid diagram showing all messaging channels:
+## The Dev UI Page
 
-```
-graph LR
-    order.created -->|OrderCreatedEvent| ServiceA
-    ServiceA -->|OrderProcessedEvent| order.processed
-    user.created -->|UserCreatedEvent| ServiceB
-    ServiceB -->|UserEnrichedEvent| user.enriched
-```
+### Diagram
+- Services are drawn as boxes (your own service is highlighted), topics as cylinders; edges are labeled with the producing or consuming method.
+- Topics with four or more connections are marked as *busy*.
+- **Scroll** to zoom, **drag** to pan, **double-click** or the fit button to fit the diagram to the screen.
+- **Click a service or topic** to highlight its connections and open the details panel with all producers and consumers.
+- Copy the Mermaid source to paste the diagram into your documentation.
+
+### Channels
+A filterable table of all channels of all services with direction, topic, service, implementation, message type and connector.
+
+### Channel Details
+Implementation, connector and message type of a channel, the schema of the message type and, for channels backed by an `Emitter`, an editor to send a test message.
+
+Mermaid is shipped with the extension (as [mvnpm](https://mvnpm.org) dependency of the deployment module), so the page works offline and nothing is added to your application's runtime.
 
 ### Schema Inspector
 Automatic JSON schema generation with example payloads:
@@ -85,7 +83,7 @@ Automatic JSON schema generation with example payloads:
     "id": {"type": "string"},
     "text": {"type": "string"},
     "authorId": {"type": "string"},
-    "timestamp": {"type": "string", "javaType": "Instant"}
+    "timestamp": {"type": "string", "format": "date-time", "javaType": "Instant"}
   }
 }
 ```
@@ -109,20 +107,26 @@ public class MessageProcessor {
 }
 ```
 
+`@Channel` is detected on injected fields (e.g. `@Channel("orders") Emitter<Order> emitter;`).
+
 ### Runtime Schema Generation
 
-At runtime, the extension introspects message types to generate:
+On startup, the extension resolves the configured topic and connector of every channel (`mp.messaging.[incoming|outgoing].<channel>.topic/connector`) and introspects the message types to generate:
 - JSON schemas
 - Example payloads
 - Field-level type information
 
 ### Multi-Service Aggregation
 
-When multiple services share the same `project-name`, their topologies are automatically aggregated in the Dev UI, giving you a complete view of your messaging architecture.
+Every service writes its topology to `<directory>/<service-name>.json` on startup. The Dev UI page reads all files in that directory, so services running in dev mode **on the same machine** with the same `directory` (and, if set, the same `project-name`) appear in one diagram.
+
+### Sending Test Messages
+
+Channels backed by an injected `Emitter` or `MutinyEmitter` get a **Send test message** editor in the channel details of the Dev UI page, prefilled with an example payload. The JSON payload is converted to the channel's message type and sent through that emitter, so it takes the same path (connector, topic, serialization) as messages sent by the application itself. Channels produced by `@Outgoing` methods cannot be fed from outside and therefore have no editor.
 
 ## REST API
 
-The extension provides a REST API for programmatic access:
+All endpoints are only available in dev mode.
 
 ### Get Topology
 
@@ -130,92 +134,43 @@ The extension provides a REST API for programmatic access:
 GET /q/messaging-topology
 ```
 
-Returns complete topology with all channels and schemas.
+Returns the topology of the current service with all channels, schemas and example payloads.
 
-### Get Aggregated Topology
-
-```bash
-GET /q/messaging-topology/aggregated
-```
-
-Returns topology from all services in the same project.
-
-### Generate Mermaid Diagram
+### Send a Test Message
 
 ```bash
-GET /q/messaging-topology/mermaid
+POST /q/messaging-topology/send
+Content-Type: application/json
+
+{"channel": "orders", "payload": {"id": "42", "amount": 9.99}}
 ```
 
-Returns Mermaid diagram source code.
-
-## Python Integration
-
-For Python services that also participate in your messaging topology, use the included Python library:
-
-### 1. Install the Library
-
-Copy `python/messaging_topology.py` to your Python project.
-
-### 2. Define Message Classes
-
-```python
-from dataclasses import dataclass
-from typing import List
-
-@dataclass
-class OrderCreatedEvent:
-    id: str
-    customerId: str
-    amount: float
-    timestamp: str
-```
-
-### 3. Register Topology
-
-```python
-from messaging_topology import MessagingTopology
-
-topology = MessagingTopology(
-    project_name="my-project",
-    service_name="python-worker"
-)
-
-topology.register_incoming(
-    channel_name="order.created",
-    message_class=OrderCreatedEvent,
-    topic="persistent://public/default/order.created"
-)
-
-topology.save()
-```
-
-The Python service topology will appear in the Quarkus Dev UI alongside your Java services!
-
-See [python/README.md](python/README.md) for complete documentation.
+Returns `400` if the channel is unknown, not backed by an emitter, or the payload does not match the message type.
 
 ## Supported Message Types
 
-The extension supports automatic schema generation for:
+Schema generation is based on the declared fields of the message type (including inherited fields). Example payloads are generated from the schema and can be deserialized into the message type:
 
-- **POJOs**: Standard Java classes with getters/setters
-- **Records**: Java records (Java 14+)
-- **Sealed Types**: Sealed classes and interfaces
-- **Collections**: `List<T>`, `Set<T>`, `Map<K,V>`
-- **Generics**: Full generic type support
-- **Nested Types**: Complex nested object structures
+- **POJOs** and **Records**, including nested objects (up to four levels, recursive types are cut off)
+- **Primitive and wrapper types**, `String`, `BigDecimal`, `BigInteger`, enums (with their constants)
+- **Date and time types**: `Instant`, `OffsetDateTime`, `ZonedDateTime`, `Date`, `LocalDateTime`, `LocalDate`, `LocalTime`, `Duration` (with ISO-8601 example values)
+- **`UUID`**, **`Optional<T>`**
+- **Collections and arrays** (`array` with the element schema) and **maps** (`object` with the value schema)
 
 ## Configuration Reference
+
+All properties are runtime properties and only take effect in dev mode.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `quarkus.messaging-topology.enabled` | boolean | `true` | Enable/disable the extension |
 | `quarkus.messaging-topology.directory` | string | `/tmp/topology` | Directory for topology files |
 | `quarkus.messaging-topology.project-name` | string | - | Project name for grouping services |
-| `quarkus.messaging-topology.service-name` | string | `${quarkus.application.name}` | Override service name |
-| `quarkus.messaging-topology.group-id` | string | - | Service group ID |
-| `quarkus.messaging-topology.auto-save` | boolean | `true` | Auto-save topology on startup |
+| `quarkus.messaging-topology.service-name` | string | artifactId of the application | Override service name |
+| `quarkus.messaging-topology.group-id` | string | groupId of the application | Override group ID |
+| `quarkus.messaging-topology.auto-save` | boolean | `true` | Save topology file on startup |
 | `quarkus.messaging-topology.cleanup-on-shutdown` | boolean | `true` | Delete topology file on shutdown |
-| `quarkus.messaging-topology.include-schema` | boolean | `true` | Include schema information |
+| `quarkus.messaging-topology.include-schema` | boolean | `true` | Include schemas and example payloads |
 
 ## Architecture
 
@@ -224,36 +179,39 @@ The extension consists of two modules:
 ### Deployment Module
 - Build-time annotation scanning with Jandex
 - Message type extraction from method signatures
-- Dev UI integration with CardPageBuildItem
+- Dev UI card and page (`dev-ui/qwc-messaging-topology.js`, a Lit web component)
+- Mermaid as mvnpm dependency, served through the Dev UI import map
+- Restriction of all beans and endpoints to dev mode
 
 ### Runtime Module
+- JSON-RPC backend of the Dev UI page (`MessagingTopologyJsonRpcService`)
 - REST API endpoints (`TopologyApiController`)
-- Schema introspection service (`SchemaIntrospector`)
+- Schema introspection and example payloads (`SchemaIntrospector`)
 - Service registry for topology aggregation
-- Qute templates for visualization
+- Mermaid diagram generation (`MermaidDiagramGenerator`)
 
 ## Use Cases
 
 - **Documentation**: Auto-generated messaging documentation
 - **Onboarding**: Help new team members understand message flows
-- **Testing**: Generate test payloads from schemas
+- **Testing**: Generate test payloads from schemas and send them through your emitters
 - **Debugging**: Visualize message paths through your system
-- **Multi-Team Projects**: Shared topology across service boundaries
-- **Polyglot Architectures**: Unified view of Java and Python services
 
 ## Requirements
 
-- Quarkus 3.31.2 or higher
-- Java 25 or higher
+- Quarkus 3.40.1.1 or higher
+- Java 17 or higher
 - Maven 3.9+
 
 ## Building from Source
 
 ```bash
-git clone https://github.com/your-org/quarkus-messaging-topology.git
+git clone https://github.com/UnvirtualHH/quarkus-messaging-topology.git
 cd quarkus-messaging-topology
 mvn clean install
 ```
+
+Artifacts are only signed when building with the `release` profile (`-Prelease`), which the Maven Release Plugin activates automatically.
 
 ## Contributing
 
@@ -274,10 +232,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## Support
 
-For questions and support:
-- Create an issue on GitHub
-- Check the [Wiki](../../wiki) for detailed documentation
-- See [python/README.md](python/README.md) for Python integration guide
+For questions and support, create an issue on GitHub.
 
 ---
 

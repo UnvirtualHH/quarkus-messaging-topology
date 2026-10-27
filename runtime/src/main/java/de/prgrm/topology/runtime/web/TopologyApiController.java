@@ -9,6 +9,7 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 
+import de.prgrm.topology.runtime.config.TopologyConfig;
 import de.prgrm.topology.runtime.model.TopologyInfo;
 import de.prgrm.topology.runtime.model.TopologyRegistry;
 import de.prgrm.topology.runtime.service.MessageSender;
@@ -21,9 +22,13 @@ public class TopologyApiController {
     @Inject
     MessageSender messageSender;
 
+    @Inject
+    TopologyConfig topologyConfig;
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public TopologyInfo getTopology() {
+        ensureEnabled();
         return TopologyRegistry.INSTANCE.getTopology();
     }
 
@@ -32,6 +37,7 @@ public class TopologyApiController {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response sendMessage(Map<String, Object> request) {
+        ensureEnabled();
         String channel = (String) request.get("channel");
         String topic = (String) request.get("topic");
         Object payload = request.get("payload");
@@ -54,10 +60,17 @@ public class TopologyApiController {
                     .build();
         }
 
+        LOG.debugf("Test message sent to channel %s", channel);
         return Response.ok(Map.of(
                 "success", true,
                 "message", "Message sent to " + channel,
                 "channel", channel,
                 "topic", topic != null ? topic : channel)).build();
+    }
+
+    private void ensureEnabled() {
+        if (!topologyConfig.enabled()) {
+            throw new NotFoundException();
+        }
     }
 }

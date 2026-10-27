@@ -1,7 +1,9 @@
 package de.prgrm.topology.deployment;
 
+import de.prgrm.topology.runtime.devui.MessagingTopologyJsonRpcService;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.devui.spi.JsonRPCProvidersBuildItem;
 import io.quarkus.devui.spi.page.CardPageBuildItem;
 import io.quarkus.devui.spi.page.Page;
 
@@ -11,10 +13,11 @@ public class MessagingTopologyDevUIProcessor {
     CardPageBuildItem createCard() {
         CardPageBuildItem card = new CardPageBuildItem();
 
-        card.addPage(Page.externalPageBuilder("Topology Viewer")
+        card.addPage(Page.webComponentPageBuilder()
+                .title("Topology")
                 .icon("font-awesome-solid:diagram-project")
-                .url("/q/messaging-topology-viewer")
-                .isHtmlContent());
+                .componentLink("qwc-messaging-topology.js")
+                .dynamicLabelJsonRPCMethodName("getServiceCount"));
 
         card.addPage(Page.externalPageBuilder("Topology API")
                 .icon("font-awesome-solid:code")
@@ -22,5 +25,10 @@ public class MessagingTopologyDevUIProcessor {
                 .isJsonContent());
 
         return card;
+    }
+
+    @BuildStep(onlyIf = IsDevelopment.class)
+    JsonRPCProvidersBuildItem createJsonRpcService() {
+        return new JsonRPCProvidersBuildItem(MessagingTopologyJsonRpcService.class);
     }
 }

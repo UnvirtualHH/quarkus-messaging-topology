@@ -1,7 +1,14 @@
 package de.prgrm.topology.runtime.service;
 
-import java.lang.reflect.*;
-import java.time.Instant;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -17,6 +24,25 @@ import de.prgrm.topology.runtime.model.TopologyRegistry;
 public class SchemaIntrospector {
 
     private static final Logger LOG = Logger.getLogger(SchemaIntrospector.class);
+
+    private static final int MAX_DEPTH = 4;
+
+    private static final Set<Class<?>> INTEGER_TYPES = Set.of(int.class, Integer.class, long.class, Long.class,
+            short.class, Short.class, byte.class, Byte.class, BigInteger.class);
+
+    private static final Set<Class<?>> NUMBER_TYPES = Set.of(double.class, Double.class, float.class, Float.class,
+            BigDecimal.class);
+
+    private static final Map<Class<?>, String> FORMATS = Map.of(
+            Instant.class, "date-time",
+            OffsetDateTime.class, "date-time",
+            ZonedDateTime.class, "date-time",
+            Date.class, "date-time",
+            LocalDateTime.class, "local-date-time",
+            LocalDate.class, "date",
+            LocalTime.class, "time",
+            UUID.class, "uuid",
+            Duration.class, "duration");
 
     private final Map<String, Map<String, Object>> schemaCache = new ConcurrentHashMap<>();
 
@@ -96,7 +122,7 @@ public class SchemaIntrospector {
         return Collections.emptyMap();
     }
 
-    public Map<String, Object> getExamplePayload(String channelName, String direction) {
+    public Object getExamplePayload(String channelName, String direction) {
         Map<String, Object> schema = getSchema(channelName, direction);
         return generateExample(schema);
     }
@@ -150,46 +176,97 @@ public class SchemaIntrospector {
         return null;
     }
 
-    private Map<String, Object> introspectClass(Class<?> clazz) {
-        Map<String, Object> schema = new HashMap<>();
-        schema.put("type", "object");
+    /**
+     * Builds a JSON-schema-like description of the message type. Non-bean types (String, numbers, dates, ...) are
+     * described directly, beans and records are described by their fields.
+     */
+    Map<String, Object> introspectClass(Class<?> clazz) {
+        Map<String, Object> schema = describe(clazz, clazz, 0, new HashSet<>());
         schema.put("className", clazz.getName());
         schema.put("simpleName", clazz.getSimpleName());
-
-        Map<String, Object> properties = new HashMap<>();
-
-        for (Field field : getAllFields(clazz)) {
-            if (Modifier.isStatic(field.getModifiers()))
-                continue;
-            if (Modifier.isTransient(field.getModifiers()))
-                continue;
-
-            Map<String, Object> fieldSchema = new HashMap<>();
-            fieldSchema.put("type", getJsonType(field.getType()));
-            fieldSchema.put("javaType", field.getType().getSimpleName());
-
-            if (field.getGenericType() instanceof ParameterizedType pType) {
-                Type[] args = pType.getActualTypeArguments();
-                if (args.length > 0 && args[0] instanceof Class<?> argClass) {
-                    fieldSchema.put("genericType", argClass.getSimpleName());
-                }
-            }
-
-            properties.put(field.getName(), fieldSchema);
-        }
-
-        schema.put("properties", properties);
-
-        List<String> requiredFields = new ArrayList<>();
-        for (Field field : getAllFields(clazz)) {
-            if (!Modifier.isStatic(field.getModifiers()) &&
-                    !Modifier.isTransient(field.getModifiers())) {
-                requiredFields.add(field.getName());
-            }
-        }
-        schema.put("required", requiredFields);
-
         return schema;
+    }
+
+    private Map<String, Object> describe(Type genericType, Class<?> raw, int depth,
+            Set<Class<?>> visiting) {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("javaType", simpleTypeName(genericType));
+
+        if (raw == Optional.class) {
+            Class<?> valueType = rawTypeOfArgument(genericType, 0);
+            schema.putAll(describe(typeArgument(genericType, 0), valueType, depth, visiting));
+            schema.put("javaType", simpleTypeName(genericType));
+            return schema;
+        }
+
+        String format = FORMATS.get(raw);
+        if (format != null) {
+            schema.put("type", "string");
+            schema.put("format", format);
+        } else if (raw == String.class || raw == char.class || raw == Character.class) {
+            schema.put("type", "string");
+        } else if (INTEGER_TYPES.contains(raw)) {
+            schema.put("type", "integer");
+        } else if (NUMBER_TYPES.contains(raw)) {
+            schema.put("type", "number");
+        } else if (raw == boolean.class || raw == Boolean.class) {
+            schema.put("type", "boolean");
+        } else if (raw.isEnum()) {
+            schema.put("type", "string");
+            schema.put("enum", Arrays.stream(raw.getEnumConstants()).map(Object::toString).toList());
+        } else if (raw.isArray()) {
+            schema.put("type", "array");
+            schema.put("items", describe(raw.getComponentType(), raw.getComponentType(), depth + 1, visiting));
+        } else if (Collection.class.isAssignableFrom(raw)) {
+            schema.put("type", "array");
+            schema.put("items", describe(typeArgument(genericType, 0), rawTypeOfArgument(genericType, 0), depth + 1,
+                    visiting));
+        } else if (Map.class.isAssignableFrom(raw)) {
+            schema.put("type", "object");
+            schema.put("additionalProperties",
+                    describe(typeArgument(genericType, 1), rawTypeOfArgument(genericType, 1), depth + 1, visiting));
+        } else {
+            schema.put("type", "object");
+            if (isBean(raw) && depth < MAX_DEPTH && visiting.add(raw)) {
+                Map<String, Object> properties = new LinkedHashMap<>();
+                for (Field field : getAllFields(raw)) {
+                    properties.put(field.getName(),
+                            describe(field.getGenericType(), field.getType(), depth + 1, visiting));
+                }
+                schema.put("properties", properties);
+                schema.put("required", new ArrayList<>(properties.keySet()));
+                visiting.remove(raw);
+            }
+        }
+        return schema;
+    }
+
+    private static boolean isBean(Class<?> raw) {
+        return !raw.isPrimitive() && !raw.isInterface() && !raw.getName().startsWith("java.")
+                && !raw.getName().startsWith("javax.");
+    }
+
+    private static Type typeArgument(Type type, int index) {
+        if (type instanceof ParameterizedType pType && pType.getActualTypeArguments().length > index) {
+            return pType.getActualTypeArguments()[index];
+        }
+        return Object.class;
+    }
+
+    private static Class<?> rawTypeOfArgument(Type type, int index) {
+        Type argument = typeArgument(type, index);
+        if (argument instanceof Class<?> clazz) {
+            return clazz;
+        }
+        if (argument instanceof ParameterizedType pType && pType.getRawType() instanceof Class<?> clazz) {
+            return clazz;
+        }
+        return Object.class;
+    }
+
+    private static String simpleTypeName(Type type) {
+        // strips packages and enclosing classes: java.util.List<com.acme.Order$Item> -> List<Item>
+        return type.getTypeName().replaceAll("\\b(?:[A-Za-z_]\\w*[.$])+", "");
     }
 
     private List<Field> getAllFields(Class<?> clazz) {
@@ -197,85 +274,94 @@ public class SchemaIntrospector {
         Class<?> current = clazz;
 
         while (current != null && current != Object.class) {
-            fields.addAll(Arrays.asList(current.getDeclaredFields()));
+            for (Field field : current.getDeclaredFields()) {
+                int modifiers = field.getModifiers();
+                if (!Modifier.isStatic(modifiers) && !Modifier.isTransient(modifiers) && !field.isSynthetic()) {
+                    fields.add(field);
+                }
+            }
             current = current.getSuperclass();
         }
 
         return fields;
     }
 
-    private String getJsonType(Class<?> type) {
-        if (type == String.class)
-            return "string";
-        if (type == Integer.class || type == int.class ||
-                type == Long.class || type == long.class ||
-                type == Short.class || type == short.class ||
-                type == Byte.class || type == byte.class)
-            return "integer";
-        if (type == Boolean.class || type == boolean.class)
-            return "boolean";
-        if (type == Double.class || type == double.class ||
-                type == Float.class || type == float.class)
-            return "number";
-        if (type.isArray() || Collection.class.isAssignableFrom(type))
-            return "array";
-        if (type == Date.class || type == Instant.class)
-            return "string";
-        if (type.isEnum())
-            return "string";
-        return "object";
-    }
-
-    private Map<String, Object> generateExample(Map<String, Object> schema) {
+    /**
+     * Generates an example payload that can be deserialized into the message type by Jackson.
+     */
+    Object generateExample(Map<String, Object> schema) {
         if (schema.isEmpty()) {
             return Map.of(
                     "id", "example-" + System.currentTimeMillis(),
                     "message", "Example message",
-                    "timestamp", Instant.now().toString());
+                    "timestamp", Instant.now().truncatedTo(ChronoUnit.SECONDS).toString());
         }
-
-        Map<String, Object> example = new LinkedHashMap<>();
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
-
-        if (properties != null) {
-            for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> prop = (Map<String, Object>) entry.getValue();
-                String type = (String) prop.get("type");
-                String javaType = (String) prop.get("javaType");
-
-                example.put(entry.getKey(), generateExampleValue(type, javaType, entry.getKey()));
-            }
-        }
-
-        return example;
+        return exampleValue(schema, "value");
     }
 
-    private Object generateExampleValue(String jsonType, String javaType, String fieldName) {
-        if (fieldName.toLowerCase().contains("id")) {
-            return "example-" + UUID.randomUUID().toString().substring(0, 8);
-        }
-        if (fieldName.toLowerCase().contains("timestamp") ||
-                fieldName.toLowerCase().contains("date") ||
-                fieldName.toLowerCase().contains("time")) {
-            return Instant.now().toString();
-        }
-        if (fieldName.toLowerCase().contains("email")) {
-            return "user@example.com";
-        }
-        if (fieldName.toLowerCase().contains("name")) {
-            return "Example Name";
+    @SuppressWarnings("unchecked")
+    private Object exampleValue(Map<String, Object> schema, String fieldName) {
+        String type = String.valueOf(schema.get("type"));
+        return switch (type) {
+            case "string" -> exampleString(schema, fieldName);
+            case "integer" -> 1;
+            case "number" -> 9.99;
+            case "boolean" -> true;
+            case "array" -> {
+                Map<String, Object> items = (Map<String, Object>) schema.get("items");
+                yield items == null ? List.of() : List.of(exampleValue(items, fieldName));
+            }
+            default -> {
+                Map<String, Object> example = new LinkedHashMap<>();
+                Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+                Map<String, Object> additional = (Map<String, Object>) schema.get("additionalProperties");
+                if (properties != null) {
+                    properties.forEach((name, property) -> example.put(name,
+                            exampleValue((Map<String, Object>) property, name)));
+                } else if (additional != null) {
+                    example.put("key", exampleValue(additional, "value"));
+                }
+                yield example;
+            }
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object exampleString(Map<String, Object> schema, String fieldName) {
+        List<String> enumValues = (List<String>) schema.get("enum");
+        if (enumValues != null && !enumValues.isEmpty()) {
+            return enumValues.get(0);
         }
 
-        return switch (jsonType) {
-            case "string" -> "example-value";
-            case "integer" -> 123;
-            case "number" -> 123.45;
-            case "boolean" -> true;
-            case "array" -> List.of("item1", "item2");
-            default -> Map.of("key", "value");
-        };
+        Object format = schema.get("format");
+        if (format != null) {
+            return switch (format.toString()) {
+                case "date-time" -> Instant.now().truncatedTo(ChronoUnit.SECONDS).toString();
+                case "local-date-time" -> LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString();
+                case "date" -> LocalDate.now().toString();
+                case "time" -> LocalTime.now().truncatedTo(ChronoUnit.SECONDS).toString();
+                case "uuid" -> UUID.randomUUID().toString();
+                case "duration" -> "PT15M";
+                default -> "example";
+            };
+        }
+
+        String name = fieldName.toLowerCase(Locale.ROOT);
+        if (name.equals("id") || name.endsWith("id")) {
+            return "example-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        if (name.contains("email")) {
+            return "user@example.com";
+        }
+        if (name.contains("currency")) {
+            return "EUR";
+        }
+        if (name.contains("url") || name.contains("uri")) {
+            return "https://example.com";
+        }
+        if (name.contains("name")) {
+            return "Example Name";
+        }
+        return "example-" + fieldName;
     }
 }

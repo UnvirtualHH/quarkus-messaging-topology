@@ -52,8 +52,10 @@ public class ServiceRegistry {
             TopologyInfo topology = TopologyRegistry.INSTANCE.getTopology();
             if (topology != null) {
                 resolveChannelConfig(topology);
-                enrichWithSchema(topology);
-                LOG.info("Topology resolved and enriched with schemas");
+                if (topologyConfig.includeSchema()) {
+                    enrichWithSchema(topology);
+                }
+                LOG.info("Topology resolved");
             }
 
             if (topologyConfig.autoSave()) {
@@ -119,7 +121,7 @@ public class ServiceRegistry {
                         channel.getDirection());
                 channel.setSchema(schema);
 
-                Map<String, Object> example = schemaIntrospector.getExamplePayload(
+                Object example = schemaIntrospector.getExamplePayload(
                         channel.getChannelName(),
                         channel.getDirection());
                 channel.setExamplePayload(example);

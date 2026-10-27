@@ -10,11 +10,12 @@ public class ChannelInfo {
     private String topic;
     private String connector;
     private String messageType; // Full class name of the message type
+    private boolean sendable; // true if the channel is backed by an injected Emitter/MutinyEmitter
+    private boolean injected; // true for @Channel injection points (methodName is then a field name)
 
     private Map<String, Object> schema;
-    private Map<String, Object> examplePayload;
+    private Object examplePayload;
 
-    // Alle Getter/Setter + neue:
     public Map<String, Object> getSchema() {
         return schema;
     }
@@ -23,11 +24,11 @@ public class ChannelInfo {
         this.schema = schema;
     }
 
-    public Map<String, Object> getExamplePayload() {
+    public Object getExamplePayload() {
         return examplePayload;
     }
 
-    public void setExamplePayload(Map<String, Object> examplePayload) {
+    public void setExamplePayload(Object examplePayload) {
         this.examplePayload = examplePayload;
     }
 
@@ -96,5 +97,21 @@ public class ChannelInfo {
 
     public void setMessageType(String messageType) {
         this.messageType = messageType;
+    }
+
+    public boolean isInjected() {
+        return injected;
+    }
+
+    public void setInjected(boolean injected) {
+        this.injected = injected;
+    }
+
+    public boolean isSendable() {
+        return sendable;
+    }
+
+    public void setSendable(boolean sendable) {
+        this.sendable = sendable;
     }
 }

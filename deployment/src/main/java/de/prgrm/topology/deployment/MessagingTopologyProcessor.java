@@ -6,12 +6,21 @@ import java.util.List;
 import org.jboss.jandex.*;
 
 import de.prgrm.topology.runtime.MessagingTopologyRecorder;
+import de.prgrm.topology.runtime.generator.MermaidDiagramGenerator;
 import de.prgrm.topology.runtime.model.ChannelInfo;
 import de.prgrm.topology.runtime.model.TopologyInfo;
+import de.prgrm.topology.runtime.service.MessageSender;
+import de.prgrm.topology.runtime.service.SchemaIntrospector;
+import de.prgrm.topology.runtime.service.ServiceRegistry;
+import de.prgrm.topology.runtime.web.TopologyApiController;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.deployment.BuildTimeConditionBuildItem;
+import io.quarkus.deployment.IsDevelopment;
+import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 
 public class MessagingTopologyProcessor {
@@ -27,30 +36,50 @@ public class MessagingTopologyProcessor {
     private static final DotName MULTI = DotName.createSimple("io.smallrye.mutiny.Multi");
     private static final DotName PUBLISHER = DotName.createSimple("org.reactivestreams.Publisher");
 
+    /**
+     * Beans and REST resources of the extension. They expose internal application details and allow sending
+     * messages, so they must only be active in dev mode.
+     */
+    private static final List<Class<?>> DEV_ONLY_CLASSES = List.of(
+            TopologyApiController.class,
+            SchemaIntrospector.class,
+            MessageSender.class,
+            ServiceRegistry.class,
+            MermaidDiagramGenerator.class);
+
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
     }
 
-    @BuildStep
+    @BuildStep(onlyIf = IsDevelopment.class)
     AdditionalBeanBuildItem registerBeans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(
-                        de.prgrm.topology.runtime.web.TopologyViewController.class,
-                        de.prgrm.topology.runtime.web.TopologyApiController.class,
-                        de.prgrm.topology.runtime.service.SchemaIntrospector.class,
-                        de.prgrm.topology.runtime.service.MessageSender.class,
-                        de.prgrm.topology.runtime.service.ServiceRegistry.class,
-                        de.prgrm.topology.runtime.generator.MermaidDiagramGenerator.class)
+                .addBeanClasses(DEV_ONLY_CLASSES.toArray(Class<?>[]::new))
                 .setUnremovable()
                 .build();
     }
 
-    @BuildStep
+    /**
+     * The runtime jar is Jandex-indexed, so its beans and JAX-RS resources would be discovered in every launch mode.
+     * Exclude them explicitly outside of dev mode (same mechanism as {@code @IfBuildProfile}).
+     */
+    @BuildStep(onlyIfNot = IsDevelopment.class)
+    void disableOutsideDevMode(CombinedIndexBuildItem combinedIndex,
+            BuildProducer<BuildTimeConditionBuildItem> conditions) {
+        for (Class<?> clazz : DEV_ONLY_CLASSES) {
+            ClassInfo classInfo = combinedIndex.getIndex().getClassByName(DotName.createSimple(clazz));
+            if (classInfo != null) {
+                conditions.produce(new BuildTimeConditionBuildItem(classInfo, false));
+            }
+        }
+    }
+
+    @BuildStep(onlyIf = IsDevelopment.class)
     @Record(ExecutionTime.RUNTIME_INIT)
     void scanAndRegisterTopology(
             MessagingTopologyRecorder recorder,
-            io.quarkus.deployment.builditem.CombinedIndexBuildItem combinedIndex,
+            CombinedIndexBuildItem combinedIndex,
             io.quarkus.deployment.pkg.builditem.CurateOutcomeBuildItem curateOutcome) {
 
         IndexView index = combinedIndex.getIndex();
@@ -135,6 +164,8 @@ public class MessagingTopologyProcessor {
             if (messageType != null) {
                 channelInfo.setMessageType(messageType);
             }
+            channelInfo.setInjected(true);
+            channelInfo.setSendable(isEmitter(fieldType));
 
             topology.addChannel(channelInfo);
         }
@@ -168,13 +199,18 @@ public class MessagingTopologyProcessor {
         return "outgoing";
     }
 
+    private boolean isEmitter(Type fieldType) {
+        DotName typeName = fieldType.name();
+        return typeName.equals(EMITTER) || typeName.equals(MUTINY_EMITTER);
+    }
+
     private String extractMessageTypeName(Type type) {
         if (type.kind() == Type.Kind.PARAMETERIZED_TYPE) {
             ParameterizedType pType = type.asParameterizedType();
             List<Type> args = pType.arguments();
 
             if (!args.isEmpty()) {
-                Type firstArg = args.getFirst();
+                Type firstArg = args.get(0);
                 if (firstArg.kind() == Type.Kind.CLASS) {
                     return firstArg.name().toString();
                 }

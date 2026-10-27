@@ -4,7 +4,7 @@
     <parent>
         <groupId>de.prgrm.quarkus</groupId>
         <artifactId>quarkus-messaging-topology-parent</artifactId>
-        <version>1.0.1</version>
+        <version>1.0.2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -34,16 +34,6 @@
           <dependency>
               <groupId>io.quarkus</groupId>
               <artifactId>quarkus-messaging</artifactId>
-          </dependency>
-
-          <dependency>
-              <groupId>io.quarkus</groupId>
-              <artifactId>quarkus-qute</artifactId>
-          </dependency>
-
-          <dependency>
-              <groupId>io.quarkus</groupId>
-              <artifactId>quarkus-rest-qute</artifactId>
           </dependency>
 
           <dependency>

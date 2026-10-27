@@ -9,19 +9,19 @@
     </parent>
     <groupId>de.prgrm.quarkus</groupId>
     <artifactId>quarkus-messaging-topology-parent</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>pom</packaging>
     <name>Quarkus Topology Parent</name>
 
     <description>Quarkus extension integrating Topology view</description>
 
-    <url>https://github.com/UnvirtualHH/uarkus-messaging-topology</url>
+    <url>https://github.com/UnvirtualHH/quarkus-messaging-topology</url>
 
     <scm>
         <connection>scm:git:git@github.com:UnvirtualHH/quarkus-messaging-topology.git</connection>
-        <developerConnection>scm:git:git@github.com:UnvirtualHH/uarkus-messaging-topology.git</developerConnection>
-        <url>https://github.com/UnvirtualHH/uarkus-messaging-topology</url>
-        <tag>v1.0.0</tag>
+        <developerConnection>scm:git:git@github.com:UnvirtualHH/quarkus-messaging-topology.git</developerConnection>
+        <url>https://github.com/UnvirtualHH/quarkus-messaging-topology</url>
+        <tag>HEAD</tag>
     </scm>
 
     <developers>
@@ -39,10 +39,10 @@
 
     <properties>
         <compiler-plugin.version>3.14.1</compiler-plugin.version>
-        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>3.40.1.1</quarkus.version>
+        <mermaid.version>11.17.2</mermaid.version>
     </properties>
 
     <dependencyManagement>
@@ -70,20 +70,6 @@
                     </execution>
                 </executions>
             </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.2.8</version>
-            <executions>
-                <execution>
-                    <id>sign-artifacts</id>
-                    <phase>verify</phase>
-                    <goals>
-                        <goal>sign</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -134,5 +120,30 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <!-- Activated by maven-release-plugin (releaseProfiles) or explicitly with -Prelease -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.8</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

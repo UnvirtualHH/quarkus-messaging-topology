@@ -70,6 +70,12 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Replaces maven-deploy-plugin: "mvn deploy -Prelease" publishes to Maven Central -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <extensions>true</extensions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>

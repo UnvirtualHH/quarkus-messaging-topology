@@ -27,7 +27,7 @@ The extension is a development tool. The Dev UI page, the REST API, its beans an
 <dependency>
     <groupId>de.prgrm.quarkus</groupId>
     <artifactId>quarkus-messaging-topology</artifactId>
-    <version>1.0.2</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -208,7 +208,7 @@ The extension consists of two modules:
 | Extension | Quarkus | Java |
 |-----------|---------|------|
 | 1.0.2 | 3.40 | 17+ |
-| from 1.0.3 | 4.0 | 21+ |
+| 2.0.0 | 4.0 | 21+ |
 
 ## Building from Source
 

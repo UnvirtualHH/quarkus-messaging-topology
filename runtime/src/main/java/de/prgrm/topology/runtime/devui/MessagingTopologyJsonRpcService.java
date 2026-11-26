@@ -7,8 +7,8 @@ import java.util.Map;
 
 import jakarta.inject.Inject;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import de.prgrm.topology.runtime.config.TopologyConfig;
 import de.prgrm.topology.runtime.generator.MermaidDiagramGenerator;
@@ -70,7 +70,7 @@ public class MessagingTopologyJsonRpcService {
         Object parsedPayload;
         try {
             parsedPayload = mapper.readValue(payload, Object.class);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             return failure("Invalid JSON: " + e.getOriginalMessage());
         }
         if (parsedPayload == null) {

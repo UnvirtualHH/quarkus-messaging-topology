@@ -3,8 +3,8 @@
 A Quarkus **dev mode** extension that automatically discovers and visualizes the messaging topology of Eclipse MicroProfile Reactive Messaging applications. Get instant insights into your message flows with interactive diagrams, schema inspection, test messages and cross-service topology aggregation.
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![Quarkus](https://img.shields.io/badge/Quarkus-3.40.1.1-blue)
-![Java](https://img.shields.io/badge/Java-17%2B-orange)
+![Quarkus](https://img.shields.io/badge/Quarkus-4.0.1-blue)
+![Java](https://img.shields.io/badge/Java-21%2B-orange)
 
 ## Features
 
@@ -199,9 +199,16 @@ The extension consists of two modules:
 
 ## Requirements
 
-- Quarkus 3.40.1.1 or higher
-- Java 17 or higher
+- Quarkus 4.0 or higher
+- Java 21 or higher
 - Maven 3.9+
+
+### Compatibility
+
+| Extension | Quarkus | Java |
+|-----------|---------|------|
+| 1.0.2 | 3.40 | 17+ |
+| from 1.0.3 | 4.0 | 21+ |
 
 ## Building from Source
 

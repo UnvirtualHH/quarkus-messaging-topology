@@ -11,6 +11,10 @@
     <artifactId>quarkus-messaging-topology-deployment</artifactId>
     <name>Quarkus - Messaging Topology - Deployment</name>
 
+    <properties>
+        <module.name>de.prgrm.quarkus.messaging.topology.deployment</module.name>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -38,7 +42,11 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-devui-spi</artifactId>
+            <artifactId>quarkus-devui-deployment-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-devjsonrpc-deployment-spi</artifactId>
         </dependency>
         <!-- Mermaid for the Dev UI page. Only the self-contained ESM bundle is used, so npm dependencies are excluded.
              The Dev UI adds mvnpm jars of the deployment classpath to its import map (dev mode only). -->
@@ -54,7 +62,7 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>

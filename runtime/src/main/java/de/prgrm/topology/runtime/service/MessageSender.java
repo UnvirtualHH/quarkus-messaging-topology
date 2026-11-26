@@ -6,8 +6,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import de.prgrm.topology.runtime.model.ChannelInfo;
 import de.prgrm.topology.runtime.model.TopologyRegistry;
@@ -81,7 +81,7 @@ public class MessageSender {
             }
             try {
                 return mapper.writeValueAsString(payload);
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 throw new IllegalArgumentException("Could not serialize payload: " + e.getMessage(), e);
             }
         }

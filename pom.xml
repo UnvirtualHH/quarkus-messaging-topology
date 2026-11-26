@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.quarkiverse</groupId>
         <artifactId>quarkiverse-parent</artifactId>
-        <version>20</version>
+        <version>26</version>
     </parent>
     <groupId>de.prgrm.quarkus</groupId>
     <artifactId>quarkus-messaging-topology-parent</artifactId>
@@ -41,7 +41,7 @@
         <compiler-plugin.version>3.14.1</compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.40.1.1</quarkus.version>
+        <quarkus.version>4.0.1</quarkus.version>
         <mermaid.version>11.17.2</mermaid.version>
     </properties>
 
@@ -69,6 +69,29 @@
                         <phase>none</phase>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- quarkiverse-parent requires an io.quarkiverse groupId, which only applies to Quarkiverse projects -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>validate-project-structure</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Quarkus 4 derives a Java module name for every artifact and warns if the jar does not define one -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>${module.name}</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
             </plugin>
             <!-- Replaces maven-deploy-plugin: "mvn deploy -Prelease" publishes to Maven Central -->
             <plugin>

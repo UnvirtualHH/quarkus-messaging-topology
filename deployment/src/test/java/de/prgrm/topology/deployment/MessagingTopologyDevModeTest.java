@@ -15,7 +15,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import de.prgrm.topology.deployment.app.Greeting;
 import de.prgrm.topology.deployment.app.GreetingResource;
@@ -62,26 +62,26 @@ class MessagingTopologyDevModeTest {
             JsonNode topology = client.call("getTopology", Map.of());
 
             assertTrue(topology.path("enabled").asBoolean());
-            String localService = topology.path("localService").asText();
+            String localService = topology.path("localService").asString();
             assertFalse(localService.isEmpty());
             JsonNode local = topology.path("services").get(0);
-            assertEquals(localService, local.path("serviceName").asText());
+            assertEquals(localService, local.path("serviceName").asString());
 
-            String diagram = topology.path("diagram").asText();
+            String diagram = topology.path("diagram").asString();
             assertTrue(diagram.contains("topic_greetings[(\"greetings\")]"), diagram);
             assertTrue(diagram.contains("localServiceClass"), diagram);
-            assertEquals("topic", topology.path("nodes").path("topic_greetings").path("kind").asText());
+            assertEquals("topic", topology.path("nodes").path("topic_greetings").path("kind").asString());
 
             JsonNode outgoing = null;
             for (JsonNode channel : local.path("channels")) {
-                if ("outgoing".equals(channel.path("direction").asText())) {
+                if ("outgoing".equals(channel.path("direction").asString())) {
                     outgoing = channel;
                 }
             }
             assertNotNull(outgoing);
             assertTrue(outgoing.path("injected").asBoolean());
-            assertEquals("Example Name", outgoing.path("examplePayload").path("name").asText());
-            assertEquals("integer", outgoing.path("schema").path("properties").path("count").path("type").asText());
+            assertEquals("Example Name", outgoing.path("examplePayload").path("name").asString());
+            assertEquals("integer", outgoing.path("schema").path("properties").path("count").path("type").asString());
         }
     }
 
@@ -94,7 +94,7 @@ class MessagingTopologyDevModeTest {
 
             JsonNode invalid = client.call("sendMessage", Map.of("channel", "greetings", "payload", "{not json"));
             assertFalse(invalid.path("success").asBoolean());
-            assertTrue(invalid.path("message").asText().startsWith("Invalid JSON"), invalid.toString());
+            assertTrue(invalid.path("message").asString().startsWith("Invalid JSON"), invalid.toString());
         }
 
         when().get("/received")

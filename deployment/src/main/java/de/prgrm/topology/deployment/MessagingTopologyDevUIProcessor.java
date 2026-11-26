@@ -3,7 +3,7 @@ package de.prgrm.topology.deployment;
 import de.prgrm.topology.runtime.devui.MessagingTopologyJsonRpcService;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.devui.spi.JsonRPCProvidersBuildItem;
+import io.quarkus.devjsonrpc.spi.JsonRPCProvidersBuildItem;
 import io.quarkus.devui.spi.page.CardPageBuildItem;
 import io.quarkus.devui.spi.page.Page;
 
@@ -27,7 +27,8 @@ public class MessagingTopologyDevUIProcessor {
         return card;
     }
 
-    @BuildStep(onlyIf = IsDevelopment.class)
+    // Must not be dev mode only: Quarkus also uses it to validate execution model annotations
+    @BuildStep
     JsonRPCProvidersBuildItem createJsonRpcService() {
         return new JsonRPCProvidersBuildItem(MessagingTopologyJsonRpcService.class);
     }

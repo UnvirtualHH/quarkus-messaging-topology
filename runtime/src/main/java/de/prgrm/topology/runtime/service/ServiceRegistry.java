@@ -14,7 +14,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import de.prgrm.topology.runtime.config.TopologyConfig;
 import de.prgrm.topology.runtime.model.ChannelInfo;

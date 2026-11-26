@@ -38,11 +38,10 @@
     </modules>
 
     <properties>
-        <compiler-plugin.version>3.14.1</compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>4.0.1</quarkus.version>
-        <mermaid.version>11.17.2</mermaid.version>
+        <mermaid.version>12.3.0</mermaid.version>
     </properties>
 
     <dependencyManagement>
@@ -109,7 +108,6 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${compiler-plugin.version}</version>
                     <configuration>
                         <parameters>true</parameters>
                     </configuration>
@@ -124,7 +122,6 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>3.1.1</version>
                     <configuration>
                         <autoVersionSubmodules>true</autoVersionSubmodules>
                         <tagNameFormat>v@{project.version}</tagNameFormat>

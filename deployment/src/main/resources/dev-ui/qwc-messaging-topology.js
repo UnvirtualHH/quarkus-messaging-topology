@@ -756,6 +756,8 @@ export class QwcMessagingTopology extends QwcHotReloadElement {
                 useMaxWidth: false,
                 htmlLabels: true,
                 curve: 'basis',
+                // Mermaid 12 wraps labels at 120px, which splits service and topic names
+                wrappingWidth: 280,
                 nodeSpacing: 36,
                 rankSpacing: 64,
                 padding: 14
